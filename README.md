@@ -69,8 +69,8 @@ tibia-server/
 ### Build with CMake (Recommended for Windows MSVC)
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/tibia-server.git
-cd tibia-server
+git clone https://github.com/rodrigopaixaorj/tibia-gameserver-unified.git
+cd tibia-gameserver-unified
 
 # Create build directory and generate project
 mkdir build
@@ -93,8 +93,14 @@ make -j$(nproc)
 
 ## Running & Configuration
 
+### 1. Game Data Prerequisite (Toor's Tarball)
+The server binary requires the official virgin CipSoft 7.7 data files (`dat/`, `map/`, `mon/`, `npc/`, `save/`, etc.). 
+* Download the original tarball released by Toor from the OtLand thread: **[7.7 RealOTs / CipSoft Files Virgin](https://otland.net/threads/7-7-realots-7-7-cipsoft-files-virgin.244562/)**.
+* Extract the data files into a folder (e.g., `../tibia-game_data` or customize the path in `config.cfg`).
+
+### 2. Server Setup & Launch
 1. Make sure `tibia-server.exe`, `mpir.dll`, `config.cfg`, `tibia.pem`, and `tibia.db` are placed in the server directory.
-2. Edit `config.cfg` to adjust network bindings or game data paths:
+2. Edit `config.cfg` to verify your game data paths:
    ```ini
    login_port = 7171
    game_port = 7172
