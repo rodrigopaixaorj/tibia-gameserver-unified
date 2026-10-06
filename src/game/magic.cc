@@ -761,10 +761,10 @@ void CheckMana(TCreature *Actor, int ManaPoints, int SoulPoints, int Delay){
 
 		Mana->Change(-ManaPoints);
 		Soul->Change(-SoulPoints);
-	}
 
-	if(ManaPoints > 0){
-		Actor->Skills[SKILL_MAGIC_LEVEL]->Increase(ManaPoints);
+		if(ManaPoints > 0){
+			Actor->Skills[SKILL_MAGIC_LEVEL]->Increase(ManaPoints);
+		}
 	}
 
 	uint32 EarliestSpellTime = ServerMilliseconds + Delay;

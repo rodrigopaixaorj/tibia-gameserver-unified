@@ -252,6 +252,13 @@ void TSkillLevel::Increase(int Amount){
 		return;
 	}
 
+	if(this->Master != NULL && this->Master->Type == PLAYER){
+		TPlayer *Player = (TPlayer*)this->Master;
+		if(CheckBit(Player->Rights, GAMEMASTER_OUTFIT) || CheckBit(Player->Rights, NO_STATISTICS) || CheckBit(Player->Rights, CHANGE_SKILLS)){
+			return;
+		}
+	}
+
 	// BUG(fusion): No bounds check as in `TSkillLevel::Decrease`?
 
 	// TODO(fusion): This could probably be an oversight but the decompiled
@@ -384,6 +391,13 @@ void TSkillProbe::Increase(int Amount){
 	if(Amount < 0){
 		error("TSkillProbe::Increase: Amount negativ (%d).\n", Amount);
 		return;
+	}
+
+	if(this->Master != NULL && this->Master->Type == PLAYER){
+		TPlayer *Player = (TPlayer*)this->Master;
+		if(CheckBit(Player->Rights, GAMEMASTER_OUTFIT) || CheckBit(Player->Rights, NO_STATISTICS) || CheckBit(Player->Rights, CHANGE_SKILLS)){
+			return;
+		}
 	}
 
 	int OldProgress = this->GetProgress();
