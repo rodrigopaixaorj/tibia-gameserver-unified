@@ -76,7 +76,6 @@ void InitAll(void){
 
 		std::cout << ":: Loading map sectors... " << std::flush;
 		InitMap();
-		std::cout << "[done]\n";
 
 		std::cout << ":: Loading game mechanics... " << std::flush;
 		InitInfo();

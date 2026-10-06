@@ -5,6 +5,11 @@
 #include "houses.hh"
 #include "script.hh"
 #include <filesystem>
+#include <chrono>
+#include <iomanip>
+#include <vector>
+#include <tuple>
+#include <iostream>
 namespace fs = std::filesystem;
 
 int SectorXMin;
@@ -1010,8 +1015,12 @@ void LoadMap(void){
 	print(1, "Lade Karte ...\n");
 	ObjectCounter = 0;
 
-	int SectorCounter = 0;
-	char FileName[4096];
+	struct TSectorFile {
+		std::string Path;
+		int X, Y, Z;
+	};
+	std::vector<TSectorFile> SectorFiles;
+
 	for(const auto &Entry : fs::directory_iterator(MAPPATH, ec)){
 		if(Entry.is_regular_file()){
 			std::string EntryName = Entry.path().filename().string();
@@ -1022,14 +1031,47 @@ void LoadMap(void){
 
 			int SectorX, SectorY, SectorZ;
 			if(sscanf(EntryName.c_str(), "%d-%d-%d.sec", &SectorX, &SectorY, &SectorZ) == 3){
+				char FileName[4096];
 				snprintf(FileName, sizeof(FileName), "%s/%s", MAPPATH, EntryName.c_str());
-				LoadSector(FileName, SectorX, SectorY, SectorZ);
-				SectorCounter += 1;
+				SectorFiles.push_back({std::string(FileName), SectorX, SectorY, SectorZ});
 			}
 		}
 	}
 
-	print(1, "%d Sektoren geladen.\n", SectorCounter);
+	size_t TotalSectors = SectorFiles.size();
+	size_t SectorCounter = 0;
+	auto StartTime = std::chrono::steady_clock::now();
+	auto LastPrintTime = StartTime;
+
+	for(const auto &Sec : SectorFiles){
+		LoadSector(Sec.Path.c_str(), Sec.X, Sec.Y, Sec.Z);
+		SectorCounter += 1;
+
+		auto Now = std::chrono::steady_clock::now();
+		auto MillisSinceLast = std::chrono::duration_cast<std::chrono::milliseconds>(Now - LastPrintTime).count();
+		if(MillisSinceLast >= 250 || SectorCounter == TotalSectors){
+			LastPrintTime = Now;
+			double ElapsedSec = std::chrono::duration_cast<std::chrono::milliseconds>(Now - StartTime).count() / 1000.0;
+			double Percent = TotalSectors > 0 ? (SectorCounter * 100.0 / TotalSectors) : 100.0;
+			double SectorsPerSec = ElapsedSec > 0.05 ? (SectorCounter / ElapsedSec) : 0.0;
+			double EtaSec = (SectorsPerSec > 0 && SectorCounter < TotalSectors) ? ((TotalSectors - SectorCounter) / SectorsPerSec) : 0.0;
+
+			std::cout << "\r:: Loading map sectors... ["
+					  << std::setw(3) << (int)Percent << "%] ("
+					  << SectorCounter << "/" << TotalSectors << " sectors, "
+					  << std::fixed << std::setprecision(1) << (ObjectCounter / 1000000.0) << "M objects, "
+					  << std::fixed << std::setprecision(0) << SectorsPerSec << " sec/s, ETA: "
+					  << (int)EtaSec << "s)   " << std::flush;
+		}
+	}
+
+	auto EndTime = std::chrono::steady_clock::now();
+	double TotalElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(EndTime - StartTime).count() / 1000.0;
+	std::cout << "\r" << std::string(110, ' ') << "\r"
+			  << ":: Loading map sectors... [done] (" << SectorCounter << " sectors, "
+			  << ObjectCounter << " objects in " << std::fixed << std::setprecision(1) << TotalElapsed << "s)\n";
+
+	print(1, "%d Sektoren geladen.\n", (int)SectorCounter);
 	print(1, "%d Objekte geladen.\n", ObjectCounter);
 }
 
