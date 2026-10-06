@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamemaster Commands and Spells Reference - Tibia 7.7x Server</title>
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: #cbd5e1;
+            --border-header: #94a3b8;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --code-bg: #f1f5f9;
+            --code-color: #0f172a;
+            --highlight-bg: #e2e8f0;
+            --accent: #2563eb;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-body: #0f172a;
+                --bg-card: #1e293b;
+                --border-color: #334155;
+                --border-header: #475569;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --code-bg: #0f172a;
+                --code-color: #38bdf8;
+                --highlight-bg: #334155;
+                --accent: #60a5fa;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .search-box {
+            margin: 16px 0 24px;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 450px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-card);
+            color: var(--text-main);
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin: 28px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-card);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--highlight-bg);
+            color: var(--text-main);
+            padding: 10px 14px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-header);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: var(--highlight-bg);
+        }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            background-color: var(--code-bg);
+            color: var(--code-color);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            border: 1px solid var(--border-color);
+        }
+
+        .formula {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .note {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        .ref-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .ref-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 14px 16px;
+        }
+
+        .ref-card h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+        }
+
+        .ref-card ul {
+            list-style: none;
+            font-size: 0.88rem;
+        }
+
+        .ref-card li {
+            margin-bottom: 6px;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Gamemaster Commands & Spells Reference</h1>
+            <p class="subtitle">Complete technical guide for Tibia 7.7x Unified Server Gamemaster and GOD spells, moderation actions, and system permissions.</p>
+        </header>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" class="search-input" placeholder="Filter commands by formula, action or keyword..." oninput="filterTable()">
+        </div>
+
+        <!-- 1. TELEPORTATION & MOVEMENT -->
+        <h2 class="section-title">1. Movement & Teleportation Spells</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Spell / Incantation</th>
+                        <th>Function</th>
+                        <th>Syntax & Parameters</th>
+                        <th>Required Permission</th>
+                        <th>Practical Example</th>
+                        <th>Description & Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="formula"><code>alani "up" / "down"</code></td>
+                        <td>Vertical Floor Teleport</td>
+                        <td><code>alani "&lt;up|down&gt;"</code></td>
+                        <td><code>TELEPORT_VERTICAL</code></td>
+                        <td><code>alani "up"</code></td>
+                        <td>Teleports the Gamemaster 1 floor up or down instantly. Does not require stairs, ladders, or holes.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alani "x,y,z"</code></td>
+                        <td>Coordinate Teleport</td>
+                        <td><code>alani "&lt;x,y,z&gt;"</code></td>
+                        <td><code>TELEPORT_TO_COORDINATE</code></td>
+                        <td><code>alani "1000,1000,7"</code></td>
+                        <td>Teleports the Gamemaster directly to the specified map coordinates. Supports <code>"x,y,z"</code> or <code>"[x,y,z]"</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alani "N"</code></td>
+                        <td>Step Teleport</td>
+                        <td><code>alani "&lt;steps&gt;"</code></td>
+                        <td><code>TELEPORT_TO_COORDINATE</code></td>
+                        <td><code>alani "5"</code></td>
+                        <td>Teleports the Gamemaster <code>N</code> tiles forward in the direction they are currently facing. Can cross impassable borders if destination is clear.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alani "MarkName"</code></td>
+                        <td>Teleport to Map Mark</td>
+                        <td><code>alani "&lt;mark_name&gt;"</code></td>
+                        <td><code>TELEPORT_TO_MARK</code></td>
+                        <td><code>alani "thais"</code></td>
+                        <td>Teleports the Gamemaster to a predefined map position / town mark by name.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alani "speed"</code></td>
+                        <td>Set Walking Speed</td>
+                        <td><code>alani "&lt;fast|fastest|normal|slow&gt;"</code></td>
+                        <td><code>MODIFY_GOSTRENGTH</code></td>
+                        <td><code>alani "fastest"</code></td>
+                        <td>Changes the Gamemaster's movement speed. Options: <code>fast</code> (speed +100), <code>fastest</code> (speed +200), or <code>normal</code> / <code>slow</code> (reset to default).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alani sio "Player"</code></td>
+                        <td>Teleport to Player (/goto)</td>
+                        <td><code>alani sio "&lt;character_name&gt;"</code></td>
+                        <td><code>TELEPORT_TO_CHARACTER</code></td>
+                        <td><code>alani sio "Bubble"</code></td>
+                        <td>Teleports the Gamemaster directly to the current location of the target player.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alliber sio "Player"</code></td>
+                        <td>Retrieve Player (/bring)</td>
+                        <td><code>alliber sio "&lt;character_name&gt;"</code></td>
+                        <td><code>RETRIEVE</code></td>
+                        <td><code>alliber sio "Bubble"</code></td>
+                        <td>Pulls/teleports the target player from anywhere in the world to the Gamemaster's current position.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>omani "Player"</code></td>
+                        <td>Temple Teleport (/home)</td>
+                        <td><code>omani "&lt;character_name&gt;"</code></td>
+                        <td><code>HOME_TELEPORT</code></td>
+                        <td><code>omani "Bubble"</code></td>
+                        <td>Teleports the target player immediately to the temple of their hometown (start position).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alani hur "up" / "down"</code></td>
+                        <td>Levitate Gamemaster</td>
+                        <td><code>alani hur "&lt;up|down&gt;"</code></td>
+                        <td><code>LEVITATE</code></td>
+                        <td><code>alani hur "up"</code></td>
+                        <td>Levitates the Gamemaster up or down without mana cost or elevation restrictions.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>aliva tera</code></td>
+                        <td>Get Current Position (GPS)</td>
+                        <td><code>aliva tera</code></td>
+                        <td><code>SHOW_COORDINATE</code></td>
+                        <td><code>aliva tera</code></td>
+                        <td>Prints the Gamemaster's current position (<code>[X, Y, Z]</code>) in the chat window.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. CREATION & SPAWNING -->
+        <h2 class="section-title">2. Creation & Spawning Spells</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Spell / Incantation</th>
+                        <th>Function</th>
+                        <th>Syntax & Parameters</th>
+                        <th>Required Permission</th>
+                        <th>Practical Example</th>
+                        <th>Description & Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="formula"><code>alevo "Item", Count</code></td>
+                        <td>Create Items (/i)</td>
+                        <td><code>alevo "&lt;item_name|id&gt;", &lt;1-100&gt;</code></td>
+                        <td><code>CREATE_OBJECTS</code></td>
+                        <td><code>alevo "magic sword", 1</code><br><code>alevo crystal coin, 100</code></td>
+                        <td>Creates 1 to 100 units of an item by name or ObjectType ID in the player's hands or on the ground. Quotes are optional for single/multi-word item names.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alevo vis "Amount"</code></td>
+                        <td>Create Money / Gold</td>
+                        <td><code>alevo vis "&lt;1-1000000&gt;"</code></td>
+                        <td><code>CREATE_MONEY</code></td>
+                        <td><code>alevo vis "50000"</code></td>
+                        <td>Creates a specific amount of gold (1 to 1,000,000), automatically converting and splitting into Crystal Coins (10k), Platinum Coins (100), and Gold Coins (1).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alevo res "Monster"</code></td>
+                        <td>Summon Wild Monster (/m)</td>
+                        <td><code>alevo res "&lt;race_name&gt;"</code></td>
+                        <td><code>CREATE_MONSTERS</code></td>
+                        <td><code>alevo res "Demon"</code><br><code>alevo res "Dragon Lord"</code></td>
+                        <td>Spawns a free/wild monster by name with no mana cost, no level check, and ignoring the standard 2-summon limit.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alevo mas res "Raid"</code></td>
+                        <td>Trigger Monster Raid (/raid)</td>
+                        <td><code>alevo mas res "&lt;raid_name&gt;"</code></td>
+                        <td><code>CREATE_MONSTERS</code></td>
+                        <td><code>alevo mas res "rats_thais"</code></td>
+                        <td>Manually starts a monster raid event defined in the server's <code>.evt</code> monster files.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. CHARACTER, VOCATION, SKILLS & QUESTS -->
+        <h2 class="section-title">3. Character, Vocation, Skills & Quests</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Spell / Incantation</th>
+                        <th>Function</th>
+                        <th>Syntax & Parameters</th>
+                        <th>Required Permission</th>
+                        <th>Practical Example</th>
+                        <th>Description & Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="formula"><code>aleta vita "Option"</code></td>
+                        <td>Change Vocation or Sex</td>
+                        <td><code>aleta vita "&lt;voc|sex&gt;"</code></td>
+                        <td><code>CHANGE_PROFESSION</code></td>
+                        <td><code>aleta vita "knight"</code><br><code>aleta vita "male"</code></td>
+                        <td>Changes character vocation (<code>knight</code>, <code>paladin</code>, <code>sorcerer</code>, <code>druid</code>, <code>promotion</code>, <code>none</code>) or gender (<code>male</code>, <code>female</code>).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alevo cogni "Exp"</code></td>
+                        <td>Add Level Experience</td>
+                        <td><code>alevo cogni "&lt;exp_points&gt;"</code></td>
+                        <td><code>CHANGE_SKILLS</code></td>
+                        <td><code>alevo cogni "100000"</code></td>
+                        <td>Directly adds experience points to the character's general experience, advancing level accordingly.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alevo cogni "Skill" "Exp"</code></td>
+                        <td>Add Skill Experience</td>
+                        <td><code>alevo cogni "&lt;skill_id&gt;" "&lt;exp&gt;"</code></td>
+                        <td><code>CHANGE_SKILLS</code></td>
+                        <td><code>alevo cogni "8" "50000"</code></td>
+                        <td>Adds skill points to a specific skill (Skill 1=Magic, 6=Shield, 7=Dist, 8=Sword, 9=Club, 10=Axe, 11=Fist, 13=Fish).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>aleta "Value"</code></td>
+                        <td>Modify Item Attributes</td>
+                        <td><code>aleta "&lt;numeric_value&gt;"</code></td>
+                        <td><code>CREATE_OBJECTS</code></td>
+                        <td><code>aleta "50"</code><br><code>aleta "3001"</code></td>
+                        <td>Modifies held item or door in front: sets rune charges (1-99), stackable item count (1-100), key number, or door keyhole lock ID.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>aliva cogni "QuestID"</code></td>
+                        <td>Get Quest / Storage Value</td>
+                        <td><code>aliva cogni "&lt;quest_number&gt;"</code></td>
+                        <td><code>CHANGE_SKILLS</code></td>
+                        <td><code>aliva cogni "100"</code></td>
+                        <td>Queries and displays the current storage value of the specified quest ID in the chat window.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>aleta cogni "Quest" "Val"</code></td>
+                        <td>Set Quest / Storage Value</td>
+                        <td><code>aleta cogni "&lt;quest_id&gt;" "&lt;val&gt;"</code></td>
+                        <td><code>CHANGE_SKILLS</code></td>
+                        <td><code>aleta cogni "100" "1"</code></td>
+                        <td>Sets a specific quest/storage state on the character (e.g. marking a quest complete or advancing stage).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alana cogni</code></td>
+                        <td>Clear All Quest Values</td>
+                        <td><code>alana cogni</code></td>
+                        <td><code>CHANGE_SKILLS</code></td>
+                        <td><code>alana cogni</code></td>
+                        <td>Resets and clears all quest/storage numbers on the character back to zero.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 4. MODERATION & PUNISHMENT -->
+        <h2 class="section-title">4. Moderation & Punishment Spells</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Spell / Incantation</th>
+                        <th>Function</th>
+                        <th>Syntax & Parameters</th>
+                        <th>Required Permission</th>
+                        <th>Practical Example</th>
+                        <th>Description & Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="formula"><code>omana "Player"</code></td>
+                        <td>Kick Player (/kick)</td>
+                        <td><code>omana "&lt;character_name&gt;"</code></td>
+                        <td><code>KICK</code></td>
+                        <td><code>omana "Troll"</code></td>
+                        <td>Disconnects and kicks the target player from the game server immediately with green magic visual effect.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>omana res "Name" "Days" "Reason"</code></td>
+                        <td>Banish Character (/ban)</td>
+                        <td><code>omana res "&lt;name&gt;" "&lt;days&gt;" "&lt;reason&gt;"</code></td>
+                        <td><code>BANISHMENT</code></td>
+                        <td><code>omana res "Troll" "7" "Insults"</code></td>
+                        <td>Banishes a character for a specified duration of days with an entry logged to the database. (In 7.7x clients, <code>Ctrl+Y</code> can also be used).</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>omana liber "Acc" "Days" "Reason"</code></td>
+                        <td>Banish Account</td>
+                        <td><code>omana liber "&lt;acc_id&gt;" "&lt;days&gt;" "&lt;reason&gt;"</code></td>
+                        <td><code>BANISHMENT</code></td>
+                        <td><code>omana liber "123456" "30" "Bot"</code></td>
+                        <td>Banishes the entire account. Prevents all characters on that account from logging in during the ban period.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>omana vis "IP/Player" "Reason"</code></td>
+                        <td>IP Banishment</td>
+                        <td><code>omana vis "&lt;ip|name&gt;" "&lt;reason&gt;"</code></td>
+                        <td><code>IP_BANISHMENT</code></td>
+                        <td><code>omana vis "192.168.1.1" "Spam"</code></td>
+                        <td>Blocks connections from the target IP address or from the specified online player's current IP.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>omana hora "Player"</code></td>
+                        <td>Namelock Character</td>
+                        <td><code>omana hora "&lt;character_name&gt;"</code></td>
+                        <td><code>NAMELOCK</code></td>
+                        <td><code>omana hora "BadName"</code></td>
+                        <td>Locks the character name due to rule violation, forcing the player to rename the character before entering the game.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>omisa "Player" "Comment"</code></td>
+                        <td>Criminal Record Notation</td>
+                        <td><code>omisa "&lt;character_name&gt;" "&lt;comment&gt;"</code></td>
+                        <td><code>NOTATION</code></td>
+                        <td><code>omisa "Player" "Warning for spam"</code></td>
+                        <td>Adds a formal written notation/warning to the character's criminal record without banishment.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 5. HOUSE MANAGEMENT -->
+        <h2 class="section-title">5. House Management Spells</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Spell / Incantation</th>
+                        <th>Function</th>
+                        <th>Syntax & Parameters</th>
+                        <th>Required Permission</th>
+                        <th>Practical Example</th>
+                        <th>Description & Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="formula"><code>aleta sio</code></td>
+                        <td>Edit Guest List</td>
+                        <td><code>aleta sio</code></td>
+                        <td><code>ENTER_HOUSES</code> or Owner</td>
+                        <td><code>aleta sio</code></td>
+                        <td>Opens the dialog window to view and edit the guest list of the house the player is standing inside or looking at.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>aleta som</code></td>
+                        <td>Edit Subowners List</td>
+                        <td><code>aleta som</code></td>
+                        <td><code>ENTER_HOUSES</code> or Owner</td>
+                        <td><code>aleta som</code></td>
+                        <td>Opens the dialog window to view and edit the subowners of the house.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>aleta grav</code></td>
+                        <td>Edit Door Access List</td>
+                        <td><code>aleta grav</code></td>
+                        <td><code>ENTER_HOUSES</code> or Owner</td>
+                        <td><code>aleta grav</code></td>
+                        <td>Opens the access list of the specific house door the character is facing.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alana sio "Guest"</code></td>
+                        <td>Kick Guest from House</td>
+                        <td><code>alana sio "&lt;character_name&gt;"</code></td>
+                        <td><code>ENTER_HOUSES</code> or Owner</td>
+                        <td><code>alana sio "Intruder"</code></td>
+                        <td>Ejects a character from inside the house, moving them outside the front door.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 6. CLEANUP & UTILITIES -->
+        <h2 class="section-title">6. Cleanup & Utility Spells</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Spell / Incantation</th>
+                        <th>Function</th>
+                        <th>Syntax & Parameters</th>
+                        <th>Required Permission</th>
+                        <th>Practical Example</th>
+                        <th>Description & Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="formula"><code>alito mas res</code></td>
+                        <td>Kill All Monsters (/clean monsters)</td>
+                        <td><code>alito mas res</code></td>
+                        <td><code>CLEANUP_FIELDS</code> or GM Rights</td>
+                        <td><code>alito mas res</code></td>
+                        <td>Instantly slays and removes all monsters within a 2-SQM radius around the Gamemaster.</td>
+                    </tr>
+                    <tr>
+                        <td class="formula"><code>alito tera</code></td>
+                        <td>Disintegrate Fields & Items</td>
+                        <td><code>alito tera</code></td>
+                        <td><code>CLEANUP_FIELDS</code></td>
+                        <td><code>alito tera</code></td>
+                        <td>Cleans and destroys magic fields (Fire, Poison, Energy, Magic Wall, Wild Growth) and movable trash items on the tile in front of the Gamemaster.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 7. TECHNICAL REFERENCE -->
+        <h2 class="section-title">7. System IDs & Permissions Reference</h2>
+        <div class="ref-grid">
+            <div class="ref-card">
+                <h3>Skill IDs (for <code>alevo cogni</code>)</h3>
+                <ul>
+                    <li><code>0</code> - Level Experience (General EXP)</li>
+                    <li><code>1</code> - Magic Level (Mana spent)</li>
+                    <li><code>6</code> - Shielding (Shield Defense)</li>
+                    <li><code>7</code> - Distance Fighting (Bows & Crossbows)</li>
+                    <li><code>8</code> - Sword Fighting</li>
+                    <li><code>9</code> - Club Fighting</li>
+                    <li><code>10</code> - Axe Fighting</li>
+                    <li><code>11</code> - Fist Fighting</li>
+                    <li><code>13</code> - Fishing</li>
+                </ul>
+            </div>
+
+            <div class="ref-card">
+                <h3>Key Character Rights (Flags)</h3>
+                <ul>
+                    <li><code>INVULNERABLE</code> - Complete damage and death immunity.</li>
+                    <li><code>UNLIMITED_MANA</code> - Spells cost 0 mana.</li>
+                    <li><code>UNLIMITED_CAPACITY</code> - Infinite carrying capacity.</li>
+                    <li><code>ALL_SPELLS</code> - Access to all spells regardless of vocation.</li>
+                    <li><code>ENTER_HOUSES</code> - Access to any house without invitation.</li>
+                    <li><code>OPEN_NAMEDOORS</code> - Opens level/quest doors freely.</li>
+                    <li><code>GAMEMASTER_OUTFIT</code> - Grants the blue Gamemaster outfit.</li>
+                    <li><code>ATTACK_EVERYWHERE</code> - Attack inside Protection Zones.</li>
+                </ul>
+            </div>
+
+            <div class="ref-card">
+                <h3>Special Communication Modes</h3>
+                <ul>
+                    <li><code>Ctrl + Y</code> - Official in-game Rule Violation report dialog for handling player complaints and applying bans/namelocks.</li>
+                    <li><code>#b &lt;Message&gt;</code> - Red Gamemaster broadcast displayed in the center of the screen to all online players.</li>
+                    <li><code>Gamemaster Channel</code> - Private channel for GM/GOD staff communication.</li>
+                    <li><code>Help Channel</code> - Highlighted tutor/GM responses in orange text.</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>Tibia 7.7x Server Engine &bull; Gamemaster Commands & Spells Technical Documentation</p>
+        </footer>
+    </div>
+
+    <script>
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const tables = document.querySelectorAll('.data-table tbody');
+
+            tables.forEach(tbody => {
+                const rows = tbody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = (query === '' || text.includes(query)) ? '' : 'none';
+                });
+            });
+        }
+    </script>
+</body>
+</html>
