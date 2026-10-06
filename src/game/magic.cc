@@ -1759,14 +1759,24 @@ void CreateThing(TCreature *Actor, const char *Param1, const char *Param2){
 		return;
 	}
 
-	int TypeID = atoi(Param1);
+	char CleanParam1[512] = "";
+	strncpy(CleanParam1, Param1, sizeof(CleanParam1) - 1);
+	char *Start = CleanParam1;
+	while(*Start == ' ' || *Start == '"' || *Start == ',') Start++;
+	size_t len = strlen(Start);
+	while(len > 0 && (Start[len - 1] == ' ' || Start[len - 1] == '"' || Start[len - 1] == ',')){
+		Start[len - 1] = 0;
+		len--;
+	}
+
+	int TypeID = atoi(Start);
 	if(TypeID != 0){
 		if(TypeID < 100 || !ObjectTypeExists(TypeID)
 				|| ObjectType(TypeID).getFlag(UNMOVE)){
 			TypeID = 0;
 		}
 	}else{
-		TypeID = GetObjectTypeByName(Param1, true).TypeID;
+		TypeID = GetObjectTypeByName(Start, true).TypeID;
 	}
 
 	if(TypeID == 0){
@@ -1775,7 +1785,15 @@ void CreateThing(TCreature *Actor, const char *Param1, const char *Param2){
 		return;
 	}
 
-	int Count = (Param2 != NULL ? atoi(Param2) : 1);
+	int Count = 1;
+	if(Param2 != NULL && Param2[0] != 0){
+		char CleanParam2[64] = "";
+		strncpy(CleanParam2, Param2, sizeof(CleanParam2) - 1);
+		char *cStart = CleanParam2;
+		while(*cStart == ' ' || *cStart == ',') cStart++;
+		Count = atoi(cStart);
+	}
+
 	if(Count < 1 || Count > 100){
 		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
 				"You may only create 1 to 100 objects.");
@@ -1783,7 +1801,7 @@ void CreateThing(TCreature *Actor, const char *Param1, const char *Param2){
 	}
 
 	ObjectType ObjType(TypeID);
-	if(!ObjType.getFlag(TAKE) && Count > 0){
+	if(!ObjType.getFlag(TAKE) && Count > 1){
 		SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE,
 				"You may only create one untakeable object.");
 		return;
@@ -3964,7 +3982,7 @@ int CheckForSpell(uint32 CreatureID, const char *Text){
 	IS.get();
 	IS.get();
 	while(!IS.eof() && SyllableCount < MAX_SPELL_SYLLABLES){
-		while(isSpace(IS.peek())){
+		while(isSpace(IS.peek()) || IS.peek() == ','){
 			IS.get();
 		}
 
@@ -3977,9 +3995,14 @@ int CheckForSpell(uint32 CreatureID, const char *Text){
 			IS.get(SpellStr[Index], sizeof(SpellStr[0]), ' ');
 		}
 
-		// TODO(fusion): This could be a problem if there is a "" parameter?
+		size_t len = strlen(SpellStr[Index]);
+		while(len > 0 && (SpellStr[Index][len - 1] == ',' || isSpace(SpellStr[Index][len - 1]))){
+			SpellStr[Index][len - 1] = '\0';
+			len--;
+		}
+
 		if(SpellStr[Index][0] == 0){
-			break;
+			continue;
 		}
 
 		for(int SyllableNr = 0;
@@ -3998,6 +4021,57 @@ int CheckForSpell(uint32 CreatureID, const char *Text){
 		}
 
 		SyllableCount += 1;
+	}
+
+	// Handle GM item creation 'alevo' without quotes for multi-word item names (e.g. alevo magic sword, 1)
+	if(SyllableCount >= 3 && Syllable[0] == 1 && Syllable[1] == 8 && Syllable[2] == 6){
+		if(SyllableCount >= 4){
+			bool LastIsNumber = true;
+			const char *LastToken = SpellStr[SyllableCount - 1];
+			if(LastToken[0] == 0) LastIsNumber = false;
+			for(int i = 0; LastToken[i] != 0; i++){
+				if(!isdigit((unsigned char)LastToken[i])){
+					LastIsNumber = false;
+					break;
+				}
+			}
+
+			if(LastIsNumber && SyllableCount > 3){
+				char CombinedItemName[512] = "";
+				for(int i = 2; i < SyllableCount - 1; i++){
+					if(i > 2) strcat(CombinedItemName, " ");
+					strcat(CombinedItemName, SpellStr[i]);
+				}
+				strncpy(SpellStr[2], CombinedItemName, sizeof(SpellStr[2]) - 1);
+				SpellStr[2][sizeof(SpellStr[2]) - 1] = 0;
+
+				strncpy(SpellStr[3], LastToken, sizeof(SpellStr[3]) - 1);
+				SpellStr[3][sizeof(SpellStr[3]) - 1] = 0;
+
+				for(int i = 4; i < MAX_SPELL_SYLLABLES; i++){
+					SpellStr[i][0] = 0;
+					Syllable[i] = 0;
+				}
+				SyllableCount = 4;
+				Syllable[2] = 6;
+				Syllable[3] = 6;
+			}else if(!LastIsNumber){
+				char CombinedItemName[512] = "";
+				for(int i = 2; i < SyllableCount; i++){
+					if(i > 2) strcat(CombinedItemName, " ");
+					strcat(CombinedItemName, SpellStr[i]);
+				}
+				strncpy(SpellStr[2], CombinedItemName, sizeof(SpellStr[2]) - 1);
+				SpellStr[2][sizeof(SpellStr[2]) - 1] = 0;
+
+				for(int i = 3; i < MAX_SPELL_SYLLABLES; i++){
+					SpellStr[i][0] = 0;
+					Syllable[i] = 0;
+				}
+				SyllableCount = 3;
+				Syllable[2] = 6;
+			}
+		}
 	}
 
 	int SpellNr = FindSpell(Syllable);
