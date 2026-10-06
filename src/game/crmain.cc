@@ -957,6 +957,134 @@ TCreature *GetCreature(Object Obj){
 	return GetCreature(Obj.getCreatureID());
 }
 
+int IdentifyCreature(const char *Name, bool ExactMatch, bool IgnoreGamemasters, TCreature **OutCreature, TCreature *Actor){
+	if(Name == NULL){
+		error("IdentifyCreature: Name ist NULL.\n");
+		return -1;
+	}
+
+	if(Name[0] == 0){
+		error("IdentifyCreature: Name ist leer.\n");
+		return -1;
+	}
+
+	if(OutCreature == NULL){
+		error("IdentifyCreature: OutCreature ist NULL.\n");
+		return -1;
+	}
+
+	*OutCreature = NULL;
+
+	// 1. Try finding a Player first
+	TPlayer *FoundPlayer = NULL;
+	int PlayerResult = IdentifyPlayer(Name, ExactMatch, IgnoreGamemasters, &FoundPlayer);
+	if(PlayerResult == 0 && FoundPlayer != NULL){
+		*OutCreature = FoundPlayer;
+		return 0;
+	}
+
+	if(PlayerResult == -2){
+		return -2;
+	}
+
+	// 2. Prepare name matching rules (handling trailing ~ for partial match)
+	int NameLength = (int)strlen(Name);
+	if(!ExactMatch){
+		if(Name[NameLength - 1] != '~'){
+			ExactMatch = true;
+		}else{
+			NameLength -= 1;
+		}
+	}
+
+	// 3. Search NPCs in CreatureList
+	TCreature *FoundNPC = NULL;
+	int NPCHits = 0;
+	for(int Index = 0; Index < FirstFreeCreature; Index += 1){
+		TCreature *Creature = *CreatureList.at(Index);
+		if(Creature == NULL || Creature->IsDead || Creature->Type != NPC){
+			continue;
+		}
+
+		if(stricmp(Creature->Name, Name, NameLength) == 0){
+			if(NameLength == (int)strlen(Creature->Name)){
+				*OutCreature = Creature;
+				return 0;
+			}else if(!ExactMatch){
+				FoundNPC = Creature;
+				NPCHits += 1;
+			}
+		}
+	}
+
+	if(!ExactMatch && NPCHits == 1){
+		*OutCreature = FoundNPC;
+		return 0;
+	}else if(!ExactMatch && NPCHits > 1){
+		return -2;
+	}
+
+	// 4. Search Monsters in CreatureList
+	TCreature *BestMonster = NULL;
+	int BestDistance = INT_MAX;
+
+	for(int Index = 0; Index < FirstFreeCreature; Index += 1){
+		TCreature *Creature = *CreatureList.at(Index);
+		if(Creature == NULL || Creature->IsDead || Creature->Type != MONSTER){
+			continue;
+		}
+
+		bool Match = false;
+		// A. Match against Race name (e.g. "demon", "dragon", "rotworm", "orc warrior")
+		if(IsRaceValid(Creature->Race) && RaceData[Creature->Race].Name[0] != 0){
+			const char *RaceName = RaceData[Creature->Race].Name;
+			if(stricmp(RaceName, Name, NameLength) == 0){
+				if(ExactMatch){
+					if(NameLength == (int)strlen(RaceName)){
+						Match = true;
+					}
+				}else{
+					Match = true;
+				}
+			}
+		}
+
+		// B. Match against Creature full name (e.g. "a demon", "an orc", "demon")
+		if(!Match && Creature->Name[0] != 0){
+			if(stricmp(Creature->Name, Name, NameLength) == 0){
+				if(ExactMatch){
+					if(NameLength == (int)strlen(Creature->Name)){
+						Match = true;
+					}
+				}else{
+					Match = true;
+				}
+			}
+		}
+
+		if(Match){
+			if(Actor != NULL){
+				int Dist = std::abs(Creature->posx - Actor->posx) +
+				           std::abs(Creature->posy - Actor->posy) +
+				           std::abs(Creature->posz - Actor->posz) * 100;
+				if(Dist < BestDistance){
+					BestDistance = Dist;
+					BestMonster = Creature;
+				}
+			}else if(BestMonster == NULL){
+				BestMonster = Creature;
+			}
+		}
+	}
+
+	if(BestMonster != NULL){
+		*OutCreature = BestMonster;
+		return 0;
+	}
+
+	return -1;
+}
+
 void InsertChainCreature(TCreature *Creature, int CoordX, int CoordY){
 	if(Creature == NULL){
 		// TODO(fusion): Maybe a typo on the name of the function? I thought it

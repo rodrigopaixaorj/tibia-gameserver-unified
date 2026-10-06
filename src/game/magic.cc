@@ -1562,41 +1562,37 @@ void TeleportToCreature(TCreature *Actor, const char *Name){
 		return;
 	}
 
-	TPlayer *Player;
+	TCreature *Target = NULL;
 	bool IgnoreGamemasters = !CheckRight(Actor->ID, READ_GAMEMASTER_CHANNEL);
-	switch(IdentifyPlayer(Name, false, IgnoreGamemasters, &Player)){
-		case  0:	break; // PLAYERFOUND ?
+	switch(IdentifyCreature(Name, false, IgnoreGamemasters, &Target, Actor)){
+		case  0:	break; // CREATURE FOUND
 		case -1:	throw PLAYERNOTONLINE;
 		case -2:	throw NAMEAMBIGUOUS;
 		default:{
-			error("TeleportToCreature: Ungültiger Rückgabewert von IdentifyPlayer.\n");
+			error("TeleportToCreature: Ungültiger Rückgabewert von IdentifyCreature.\n");
 			throw ERROR;
 		}
 	}
 
-	if(Actor == Player){
+	if(Actor == Target){
 		GraphicalEffect(Actor->CrObject, EFFECT_ENERGY);
 		return;
 	}
 
 	GraphicalEffect(Actor->CrObject, EFFECT_POFF);
 
-	// TODO(fusion): I assume `SearchFreeField` won't modify the input position
-	// so we're either teleporting to a nearby free position or to the player's
-	// position if it's not protection zone.
-	int DestX = Player->posx;
-	int DestY = Player->posy;
-	int DestZ = Player->posz;
+	int DestX = Target->posx;
+	int DestY = Target->posy;
+	int DestZ = Target->posz;
 	uint16 HouseID = GetHouseID(DestX, DestY, DestZ);
-	if(!SearchFreeField(&DestX, &DestY, &DestZ, 1, HouseID, true)
-			|| IsProtectionZone(DestX, DestY, DestZ)){
+	if(!SearchFreeField(&DestX, &DestY, &DestZ, 1, HouseID, true)){
 		throw NOROOM;
 	}
 
 	Object Dest = GetMapContainer(DestX, DestY, DestZ);
 	Move(0, Actor->CrObject, Dest, -1, false, NONE);
 	GraphicalEffect(DestX, DestY, DestZ, EFFECT_ENERGY);
-	Log("banish", "%s teleportiert sich zu %s.\n", Actor->Name, Player->Name);
+	Log("banish", "%s teleportiert sich zu %s.\n", Actor->Name, Target->Name);
 }
 
 void TeleportPlayerToMe(TCreature *Actor, const char *Name){

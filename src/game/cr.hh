@@ -940,6 +940,7 @@ extern priority_queue<uint32, uint32> ToDoQueue;
 bool IsCreaturePlayer(uint32 CreatureID);
 TCreature *GetCreature(uint32 CreatureID);
 TCreature *GetCreature(Object Obj);
+int IdentifyCreature(const char *Name, bool ExactMatch, bool IgnoreGamemasters, TCreature **OutCreature, TCreature *Actor = NULL);
 void InsertChainCreature(TCreature *Creature, int CoordX, int CoordY);
 void DeleteChainCreature(TCreature *Creature);
 void MoveChainCreature(TCreature *Creature, int CoordX, int CoordY);
