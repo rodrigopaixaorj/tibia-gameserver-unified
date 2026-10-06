@@ -4,10 +4,21 @@
 
 static void NormalizeDataPath(char *Path, const char *SubDir){
 	namespace fs = std::filesystem;
-	if(Path[0] != 0 && fs::exists(Path) && fs::is_directory(Path)){
-		return;
+	if(Path[0] != 0){
+		fs::path direct(Path);
+		if(fs::exists(direct) && fs::is_directory(direct)){
+			return;
+		}
+		fs::path sub = direct / SubDir;
+		if(fs::exists(sub) && fs::is_directory(sub)){
+			std::string s = sub.string();
+			strncpy(Path, s.c_str(), 4096);
+			return;
+		}
 	}
 	const char *candidates[] = {
+		"../CipSoft Server/tibia-game_data",
+		"../../CipSoft Server/tibia-game_data",
 		"../tibia-game_data",
 		"tibia-game_data",
 		"../../tibia-game_data",
@@ -165,30 +176,50 @@ void ReadConfig(void){
 
 		// TODO(fusion): Ughh... Get rid of all `strcpy`s. A malicious configuration
 		// file could do a lot of damage.
-		if(strcmp(Identifier, "binpath") == 0){
+		if(strcmp(Identifier, "binpath") == 0 || strcmp(Identifier, "bin_path") == 0){
 			strcpy(BINPATH, Script.readString());
-		}else if(strcmp(Identifier, "mappath") == 0){
+		}else if(strcmp(Identifier, "mappath") == 0 || strcmp(Identifier, "map_path") == 0){
 			strcpy(MAPPATH, Script.readString());
-		}else if(strcmp(Identifier, "origmappath") == 0){
+		}else if(strcmp(Identifier, "origmappath") == 0 || strcmp(Identifier, "orig_map_path") == 0){
 			strcpy(ORIGMAPPATH, Script.readString());
-		}else if(strcmp(Identifier, "datapath") == 0){
+		}else if(strcmp(Identifier, "datapath") == 0 || strcmp(Identifier, "data_path") == 0){
 			strcpy(DATAPATH, Script.readString());
-		}else if(strcmp(Identifier, "monsterpath") == 0){
+		}else if(strcmp(Identifier, "monsterpath") == 0 || strcmp(Identifier, "monster_path") == 0){
 			strcpy(MONSTERPATH, Script.readString());
-		}else if(strcmp(Identifier, "npcpath") == 0){
+		}else if(strcmp(Identifier, "npcpath") == 0 || strcmp(Identifier, "npc_path") == 0){
 			strcpy(NPCPATH, Script.readString());
-		}else if(strcmp(Identifier, "userpath") == 0){
+		}else if(strcmp(Identifier, "userpath") == 0 || strcmp(Identifier, "user_path") == 0){
 			strcpy(USERPATH, Script.readString());
-		}else if(strcmp(Identifier, "logpath") == 0){
+		}else if(strcmp(Identifier, "logpath") == 0 || strcmp(Identifier, "log_path") == 0){
 			strcpy(LOGPATH, Script.readString());
-		}else if(strcmp(Identifier, "savepath") == 0){
+		}else if(strcmp(Identifier, "savepath") == 0 || strcmp(Identifier, "save_path") == 0){
 			strcpy(SAVEPATH, Script.readString());
 		}else if(strcmp(Identifier, "shm") == 0){
 			SHMKey = Script.readNumber();
-		}else if(strcmp(Identifier, "adminport") == 0){
+		}else if(strcmp(Identifier, "gameport") == 0 || strcmp(Identifier, "game_port") == 0){
+			GamePort = Script.readNumber();
+		}else if(strcmp(Identifier, "loginport") == 0 || strcmp(Identifier, "login_port") == 0){
+			Script.readNumber();
+		}else if(strcmp(Identifier, "adminport") == 0 || strcmp(Identifier, "admin_port") == 0){
 			AdminPort = Script.readNumber();
-		}else if(strcmp(Identifier, "adminaddress") == 0){
+		}else if(strcmp(Identifier, "adminaddress") == 0 || strcmp(Identifier, "admin_address") == 0){
 			strcpy(AdminAddress, Script.readString());
+		}else if(strcmp(Identifier, "bindaddress") == 0 || strcmp(Identifier, "bind_address") == 0){
+			strcpy(GameAddress, Script.readString());
+		}else if(strcmp(Identifier, "worldaddress") == 0 || strcmp(Identifier, "world_address") == 0){
+			Script.readString();
+		}else if(strcmp(Identifier, "maxplayers") == 0 || strcmp(Identifier, "max_players") == 0){
+			MaxPlayers = Script.readNumber();
+		}else if(strcmp(Identifier, "maxconnections") == 0 || strcmp(Identifier, "max_connections") == 0){
+			Script.readNumber();
+		}else if(strcmp(Identifier, "connectiontimeout") == 0 || strcmp(Identifier, "connection_timeout") == 0){
+			Script.readNumber();
+		}else if(strcmp(Identifier, "databasefile") == 0 || strcmp(Identifier, "database_file") == 0){
+			Script.readString();
+		}else if(strcmp(Identifier, "rsakeyfile") == 0 || strcmp(Identifier, "rsa_key_file") == 0){
+			Script.readString();
+		}else if(strcmp(Identifier, "motd") == 0){
+			Script.readString();
 		}else if(strcmp(Identifier, "querymanagerport") == 0){
 			QueryManagerPort = Script.readNumber();
 		}else if(strcmp(Identifier, "querymanageraddress") == 0){
@@ -203,7 +234,7 @@ void ReadConfig(void){
 			DebugLevel = Script.readNumber();
 		}else if(strcmp(Identifier, "state") == 0){
 			PrivateWorld = (strcmp(Script.readIdentifier(), "private") == 0);
-		}else if(strcmp(Identifier, "world") == 0){
+		}else if(strcmp(Identifier, "world") == 0 || strcmp(Identifier, "world_name") == 0 || strcmp(Identifier, "worldname") == 0){
 			strcpy(WorldName, Script.readString());
 		}else if(strcmp(Identifier, "beat") == 0){
 			Beat = Script.readNumber();
@@ -299,8 +330,14 @@ void ReadConfig(void){
 				NumberOfQueryManagers += 1;
 			}while(Script.readSpecial() != '}');
 		}else{
-			// TODO(fusion):
-			//error("Unknown configuration key \"%s\"", Identifier);
+			// Safely skip unhandled value
+			Script.nextToken();
+			if(Script.Token == SPECIAL && (Script.getSpecial() == '{' || Script.getSpecial() == '(')){
+				char closeChar = (Script.getSpecial() == '{') ? '}' : ')';
+				while(Script.Token != ENDOFFILE && !(Script.Token == SPECIAL && Script.getSpecial() == closeChar)){
+					Script.nextToken();
+				}
+			}
 		}
 		}
 	}
