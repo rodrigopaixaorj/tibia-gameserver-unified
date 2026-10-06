@@ -428,16 +428,12 @@ void TPlayer::SetInList(void){
 void TPlayer::DelInList(void){
 	NotifyBuddies(this->ID, this->Name, false);
 
+	PlayerMutex.down();
 	for(int Index = 0; Index < FirstFreePlayer; Index += 1){
 		if(*PlayerList.at(Index) == this){
-			// TODO(fusion): This can't be right? If the player at `Index` changes
-			// before entering the critical section, we could end up removing the
-			// wrong player from the list..
-			PlayerMutex.down();
 			FirstFreePlayer -= 1;
 			*PlayerList.at(Index) = *PlayerList.at(FirstFreePlayer);
 			*PlayerList.at(FirstFreePlayer) = NULL;
-			PlayerMutex.up();
 
 			DecrementPlayersOnline();
 			if(this->Profession == PROFESSION_NONE){
@@ -447,6 +443,7 @@ void TPlayer::DelInList(void){
 			break;
 		}
 	}
+	PlayerMutex.up();
 }
 
 void TPlayer::ClearRequest(void){

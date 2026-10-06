@@ -122,46 +122,43 @@ bool isSpace(int c){
 }
 
 bool isAlpha(int c){
-	// TODO(fusion): This is most likely wrong! We're assuming a direct conversion
-	// from `char` to `int` which will cause sign extension for negative values. This
-	// wouldn't be a problem if we expected to parse only streams of `char[]` but can
-	// be problematic for the output of `getc` which returns bytes as `unsigned char`
-	// converted to `int`.
-	//	TLDR: The parameter `c` should be `uint8`.
-	return ('A' <= c && c <= 'Z')
-		|| ('a' <= c && c <= 'z')
-		|| c == -0x1C	// E4 => ä
-		|| c == -0x0A	// F6 => ö
-		|| c == -0x04	// FC => ü
-		|| c == -0x3C	// C4 => Ä
-		|| c == -0x2A	// D6 => Ö
-		|| c == -0x24	// DC => Ü
-		|| c == -0x21;	// DF => ß
+	uint8 uc = (uint8)(unsigned char)c;
+	return ('A' <= uc && uc <= 'Z')
+		|| ('a' <= uc && uc <= 'z')
+		|| uc == 0xE4	// ä
+		|| uc == 0xF6	// ö
+		|| uc == 0xFC	// ü
+		|| uc == 0xC4	// Ä
+		|| uc == 0xD6	// Ö
+		|| uc == 0xDC	// Ü
+		|| uc == 0xDF;	// ß
 }
 
 bool isEngAlpha(int c){
-	return ('A' <= c && c <= 'Z')
-		|| ('a' <= c && c <= 'z');
+	uint8 uc = (uint8)(unsigned char)c;
+	return ('A' <= uc && uc <= 'Z')
+		|| ('a' <= uc && uc <= 'z');
 }
 
 bool isDigit(int c){
-	return ('0' <= c && c <= '9');
+	uint8 uc = (uint8)(unsigned char)c;
+	return ('0' <= uc && uc <= '9');
 }
 
 int toLower(int c){
-	// TODO(fusion): Same problem as `isAlpha`.
-	if(('A' <= c && c <= 'Z') || (0xC0 <= c && c <= 0xDE && c != 0xD7)){
-		c += 32;
+	uint8 uc = (uint8)(unsigned char)c;
+	if(('A' <= uc && uc <= 'Z') || (0xC0 <= uc && uc <= 0xDE && uc != 0xD7)){
+		uc += 32;
 	}
-	return c;
+	return (int)uc;
 }
 
 int toUpper(int c){
-	// TODO(fusion): Same problem as `isAlpha`.
-	if(('a' <= c && c <= 'z') || (0xE0 <= c && c <= 0xFE && c != 0xF7)){
-		c -= 32;
+	uint8 uc = (uint8)(unsigned char)c;
+	if(('a' <= uc && uc <= 'z') || (0xE0 <= uc && uc <= 0xFE && uc != 0xF7)){
+		uc -= 32;
 	}
-	return c;
+	return (int)uc;
 }
 
 char *strLower(char *s){

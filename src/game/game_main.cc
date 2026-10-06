@@ -117,7 +117,7 @@ void ExitAll(void){
 	ExitMoveUse();
 	ExitInfo();
 	ExitHouses();
-	ExitMap(SaveMapOn);
+	ExitMap(true);
 	ExitObjects();
 	ExitReader();
 	ExitWriter();

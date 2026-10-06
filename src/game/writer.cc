@@ -55,8 +55,10 @@ void InsertProtocolOrder(const char *ProtocolName, const char *Text){
 	ProtocolMutex.down();
 	ProtocolBufferEmpty.down();
 	int WritePos = ProtocolPointerWrite % NARRAY(ProtocolBuffer);
-	strcpy(ProtocolBuffer[WritePos].ProtocolName, ProtocolName);
-	strcpy(ProtocolBuffer[WritePos].Text, Text);
+	strncpy(ProtocolBuffer[WritePos].ProtocolName, ProtocolName, sizeof(ProtocolBuffer[WritePos].ProtocolName) - 1);
+	ProtocolBuffer[WritePos].ProtocolName[sizeof(ProtocolBuffer[WritePos].ProtocolName) - 1] = 0;
+	strncpy(ProtocolBuffer[WritePos].Text, Text, sizeof(ProtocolBuffer[WritePos].Text) - 1);
+	ProtocolBuffer[WritePos].Text[sizeof(ProtocolBuffer[WritePos].Text) - 1] = 0;
 	ProtocolPointerWrite += 1;
 	ProtocolBufferFull.up();
 	ProtocolMutex.up();

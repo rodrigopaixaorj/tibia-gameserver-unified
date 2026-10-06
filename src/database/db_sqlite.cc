@@ -441,7 +441,27 @@ int DB_LoginGame(uint32 AccountID, char *PlayerName, const char *Password,
 		}
 	}
 
-	if(NumberOfBuddies) *NumberOfBuddies = 0;
+	if(NumberOfBuddies){
+		*NumberOfBuddies = 0;
+		if(BuddyIDs && BuddyNames){
+			const char *BuddySQL = "SELECT B.BuddyID, C.Name FROM Buddies B "
+								  "JOIN Characters C ON B.BuddyID = C.CharacterID "
+								  "WHERE B.AccountID = ?1 LIMIT 100";
+			if(sqlite3_prepare_v2(g_DB, BuddySQL, -1, &Stmt, nullptr) == SQLITE_OK){
+				sqlite3_bind_int(Stmt, 1, (int)AccountID);
+				int bCount = 0;
+				while(sqlite3_step(Stmt) == SQLITE_ROW && bCount < 100){
+					BuddyIDs[bCount] = (uint32)sqlite3_column_int(Stmt, 0);
+					const char *BName = (const char*)sqlite3_column_text(Stmt, 1);
+					strncpy(BuddyNames[bCount], BName ? BName : "", 29);
+					BuddyNames[bCount][29] = 0;
+					bCount++;
+				}
+				*NumberOfBuddies = bCount;
+				sqlite3_finalize(Stmt);
+			}
+		}
+	}
 	if(Guild) Guild[0] = 0;
 	if(Rank) Rank[0] = 0;
 	if(Title) Title[0] = 0;
@@ -503,7 +523,7 @@ int DB_InsertHouseOwner(uint16 HouseID, uint32 OwnerID, int PaidUntil){
 	std::lock_guard<std::mutex> Lock(g_DBMutex);
 	if(g_DB == nullptr) return 1;
 	sqlite3_stmt *Stmt = nullptr;
-	const char *SQL = "INSERT OR REPLACE INTO HouseOwners (HouseID, OwnerID, PaidUntil) VALUES (?1, ?2, ?3)";
+	const char *SQL = "INSERT OR REPLACE INTO HouseOwners (WorldID, HouseID, OwnerID, PaidUntil) VALUES (1, ?1, ?2, ?3)";
 	if(sqlite3_prepare_v2(g_DB, SQL, -1, &Stmt, nullptr) == SQLITE_OK){
 		sqlite3_bind_int(Stmt, 1, HouseID);
 		sqlite3_bind_int(Stmt, 2, (int)OwnerID);
@@ -537,8 +557,33 @@ int DB_GetHouseOwners(int *NumberOfOwners, uint16 *HouseIDs,
 		uint32 *OwnerIDs, char (*OwnerNames)[30], int *PaidUntils){
 	std::lock_guard<std::mutex> Lock(g_DBMutex);
 	if(g_DB == nullptr || NumberOfOwners == nullptr) return 1;
+	int MaxOwners = *NumberOfOwners;
 	*NumberOfOwners = 0;
-	return 0;
+
+	sqlite3_stmt *Stmt = nullptr;
+	const char *SQL = "SELECT HO.HouseID, HO.OwnerID, C.Name, HO.PaidUntil "
+					  "FROM HouseOwners HO "
+					  "JOIN Characters C ON HO.OwnerID = C.CharacterID "
+					  "ORDER BY HO.HouseID ASC LIMIT ?1";
+	if(sqlite3_prepare_v2(g_DB, SQL, -1, &Stmt, nullptr) == SQLITE_OK){
+		sqlite3_bind_int(Stmt, 1, MaxOwners);
+		int Count = 0;
+		while(sqlite3_step(Stmt) == SQLITE_ROW && Count < MaxOwners){
+			if(HouseIDs) HouseIDs[Count] = (uint16)sqlite3_column_int(Stmt, 0);
+			if(OwnerIDs) OwnerIDs[Count] = (uint32)sqlite3_column_int(Stmt, 1);
+			const char *Name = (const char*)sqlite3_column_text(Stmt, 2);
+			if(OwnerNames){
+				strncpy(OwnerNames[Count], Name ? Name : "", 29);
+				OwnerNames[Count][29] = 0;
+			}
+			if(PaidUntils) PaidUntils[Count] = sqlite3_column_int(Stmt, 3);
+			Count++;
+		}
+		*NumberOfOwners = Count;
+		sqlite3_finalize(Stmt);
+		return 0;
+	}
+	return 1;
 }
 
 int DB_ClearIsOnline(int *NumberOfAffectedPlayers){
@@ -561,11 +606,33 @@ int DB_LogKilledCreatures(int NumberOfRaces, const char **Names,
 }
 
 int DB_AddBuddy(uint32 AccountID, uint32 Buddy){
-	return 0;
+	std::lock_guard<std::mutex> Lock(g_DBMutex);
+	if(g_DB == nullptr) return 1;
+	sqlite3_stmt *Stmt = nullptr;
+	const char *SQL = "INSERT OR IGNORE INTO Buddies (WorldID, AccountID, BuddyID) VALUES (1, ?1, ?2)";
+	if(sqlite3_prepare_v2(g_DB, SQL, -1, &Stmt, nullptr) == SQLITE_OK){
+		sqlite3_bind_int(Stmt, 1, (int)AccountID);
+		sqlite3_bind_int(Stmt, 2, (int)Buddy);
+		sqlite3_step(Stmt);
+		sqlite3_finalize(Stmt);
+		return 0;
+	}
+	return 1;
 }
 
 int DB_RemoveBuddy(uint32 AccountID, uint32 Buddy){
-	return 0;
+	std::lock_guard<std::mutex> Lock(g_DBMutex);
+	if(g_DB == nullptr) return 1;
+	sqlite3_stmt *Stmt = nullptr;
+	const char *SQL = "DELETE FROM Buddies WHERE AccountID = ?1 AND BuddyID = ?2";
+	if(sqlite3_prepare_v2(g_DB, SQL, -1, &Stmt, nullptr) == SQLITE_OK){
+		sqlite3_bind_int(Stmt, 1, (int)AccountID);
+		sqlite3_bind_int(Stmt, 2, (int)Buddy);
+		sqlite3_step(Stmt);
+		sqlite3_finalize(Stmt);
+		return 0;
+	}
+	return 1;
 }
 
 int DB_DecrementIsOnline(uint32 CharacterID){

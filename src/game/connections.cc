@@ -191,9 +191,21 @@ void TConnection::Connect(int Socket){
 	this->RandomSeed = rand();
 
 	struct sockaddr_in RemoteAddr;
+	memset(&RemoteAddr, 0, sizeof(RemoteAddr));
 	socklen_t RemoteAddrLen = sizeof(RemoteAddr);
-	getpeername(Socket, (struct sockaddr*)&RemoteAddr, &RemoteAddrLen);
-	strcpy(this->IPAddress, inet_ntoa(RemoteAddr.sin_addr));
+	if(getpeername(Socket, (struct sockaddr*)&RemoteAddr, &RemoteAddrLen) == 0 && RemoteAddr.sin_addr.s_addr != 0){
+		char *ipStr = inet_ntoa(RemoteAddr.sin_addr);
+		if(ipStr){
+			strncpy(this->IPAddress, ipStr, sizeof(this->IPAddress) - 1);
+			this->IPAddress[sizeof(this->IPAddress) - 1] = 0;
+		} else {
+			strncpy(this->IPAddress, "127.0.0.1", sizeof(this->IPAddress) - 1);
+			this->IPAddress[sizeof(this->IPAddress) - 1] = 0;
+		}
+	} else {
+		strncpy(this->IPAddress, "127.0.0.1", sizeof(this->IPAddress) - 1);
+		this->IPAddress[sizeof(this->IPAddress) - 1] = 0;
+	}
 }
 
 void TConnection::Login(void){

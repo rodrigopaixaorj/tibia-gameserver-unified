@@ -212,6 +212,17 @@ static void LoginServerWorker(int Port, std::string BindIP){
 			socket_t ClientSock = accept(g_LoginSocket, (sockaddr*)&ClientAddr, &AddrLen);
 			if(!SOCKET_IS_VALID(ClientSock)) continue;
 
+			// Set 3-second receive timeout to prevent DoS from slow/hanging connections
+#if defined(_WIN32)
+			DWORD timeoutMs = 3000;
+			setsockopt(ClientSock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeoutMs, sizeof(timeoutMs));
+#else
+			struct timeval tv;
+			tv.tv_sec = 3;
+			tv.tv_usec = 0;
+			setsockopt(ClientSock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+#endif
+
 			char IPString[64];
 			snprintf(IPString, sizeof(IPString), "%s:%d", inet_ntoa(ClientAddr.sin_addr), ntohs(ClientAddr.sin_port));
 
@@ -222,21 +233,23 @@ static void LoginServerWorker(int Port, std::string BindIP){
 				uint16 PacketSize = BufferRead16LE(Header);
 				if(PacketSize > 0 && PacketSize <= 2048){
 					uint8 *PacketData = (uint8*)malloc(PacketSize);
-					int TotalRead = 0;
-					while(TotalRead < PacketSize){
-						int chunk = recv(ClientSock, (char*)PacketData + TotalRead, PacketSize - TotalRead, 0);
-						if(chunk <= 0) break;
-						TotalRead += chunk;
-					}
-
-					if(TotalRead == PacketSize){
-						if(PacketData[0] == 0x01){
-							HandleLoginRequest(ClientSock, PacketData, PacketSize, IPString);
-						} else if(PacketData[0] == 0xFF){
-							HandleStatusRequest(ClientSock);
+					if(PacketData){
+						int TotalRead = 0;
+						while(TotalRead < PacketSize){
+							int chunk = recv(ClientSock, (char*)PacketData + TotalRead, PacketSize - TotalRead, 0);
+							if(chunk <= 0) break;
+							TotalRead += chunk;
 						}
+
+						if(TotalRead == PacketSize){
+							if(PacketData[0] == 0x01){
+								HandleLoginRequest(ClientSock, PacketData, PacketSize, IPString);
+							} else if(PacketData[0] == 0xFF){
+								HandleStatusRequest(ClientSock);
+							}
+						}
+						free(PacketData);
 					}
-					free(PacketData);
 				}
 			}
 			SocketClose(ClientSock);
