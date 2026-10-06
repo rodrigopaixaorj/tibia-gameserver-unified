@@ -1435,6 +1435,13 @@ void Teleport(TCreature *Actor, const char *Param){
 	uint16 HouseID = 0xFFFF; // NOTE(fusion): See `SearchFreeField`.
 	int MDGoStrength = Actor->Skills[SKILL_GO_STRENGTH]->MDAct;
 
+	char *EndPtr = NULL;
+	long Steps = strtol(Param, &EndPtr, 10);
+	while(EndPtr && *EndPtr != '\0' && isspace((unsigned char)*EndPtr)){
+		EndPtr++;
+	}
+	bool IsSingleNumber = (EndPtr != Param && *EndPtr == '\0' && strchr(Param, ',') == NULL);
+
 	if(stricmp(Param, "up") == 0){
 		if(!CheckRight(Actor->ID, TELEPORT_VERTICAL)){
 			return;
@@ -1461,6 +1468,27 @@ void Teleport(TCreature *Actor, const char *Param){
 			return;
 		}
 		MDGoStrength = 0;
+	}else if(IsSingleNumber){
+		if(!CheckRight(Actor->ID, TELEPORT_TO_COORDINATE) && !CheckRight(Actor->ID, TELEPORT_TO_MARK)){
+			return;
+		}
+
+		switch(Actor->Direction){
+			case DIRECTION_NORTH:		DestY -= (int)Steps; break;
+			case DIRECTION_EAST:		DestX += (int)Steps; break;
+			case DIRECTION_SOUTH:		DestY += (int)Steps; break;
+			case DIRECTION_WEST:		DestX -= (int)Steps; break;
+			case DIRECTION_NORTHEAST:	DestX += (int)Steps; DestY -= (int)Steps; break;
+			case DIRECTION_NORTHWEST:	DestX -= (int)Steps; DestY -= (int)Steps; break;
+			case DIRECTION_SOUTHEAST:	DestX += (int)Steps; DestY += (int)Steps; break;
+			case DIRECTION_SOUTHWEST:	DestX -= (int)Steps; DestY += (int)Steps; break;
+			default: break;
+		}
+
+		if(!IsOnMap(DestX, DestY, DestZ)){
+			SendMessage(Actor->Connection, TALK_FAILURE_MESSAGE, "Invalid coordinates.");
+			return;
+		}
 	}else{
 		int ParamX, ParamY, ParamZ;
 		if(sscanf(Param, "%d,%d,%d", &ParamX, &ParamY, &ParamZ) == 3
