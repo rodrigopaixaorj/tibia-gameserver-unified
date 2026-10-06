@@ -327,7 +327,8 @@ void InsertWaitinglistEntry(const char *Name, uint32 NextTry, bool FreeAccount, 
 	if(Entry == NULL){
 		Entry = Waitinglist.getFreeItem();
 		Entry->Next = NULL;
-		strcpy(Entry->Name, Name);
+		strncpy(Entry->Name, Name, sizeof(Entry->Name) - 1);
+		Entry->Name[sizeof(Entry->Name) - 1] = 0;
 		Entry->Sleeping = false;
 		if(Prev != NULL){
 			Prev->Next = Entry;
@@ -603,12 +604,13 @@ bool HandleLogin(TConnection *Connection){
 		InputBuffer.readBytes(AsymmetricData, 128);
 
 		RSAMutex.down();
-		if(!PrivateKey.decrypt(AsymmetricData) || AsymmetricData[0] != 0){
-			RSAMutex.up();
+		bool decOk = PrivateKey.decrypt(AsymmetricData);
+		RSAMutex.up();
+
+		if(!decOk || AsymmetricData[0] != 0){
 			SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "Login failed due to corrupt data.", -1);
 			return false;
 		}
-		RSAMutex.up();
 
 		TReadBuffer ReadBuffer(AsymmetricData, 128);
 		ReadBuffer.readByte(); // 0
