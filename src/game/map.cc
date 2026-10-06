@@ -911,11 +911,10 @@ void InitSector(int SectorX, int SectorY, int SectorZ){
 	for(int X = 0; X < 32; X += 1){
 		for(int Y = 0; Y < 32; Y += 1){
 			Object MapCon = CreateObject();
-			// NOTE(fusion): `Attributes[0]` is probably the object id of the
-			// first object in the container.
-			AccessObject(MapCon)->Attributes[1] = SectorX * 32 + X;
-			AccessObject(MapCon)->Attributes[2] = SectorY * 32 + Y;
-			AccessObject(MapCon)->Attributes[3] = SectorZ;
+			TObject *ObjEntry = AccessObject(MapCon);
+			ObjEntry->Attributes[1] = SectorX * 32 + X;
+			ObjEntry->Attributes[2] = SectorY * 32 + Y;
+			ObjEntry->Attributes[3] = SectorZ;
 			NewSector->MapCon[X][Y] = MapCon;
 		}
 	}
@@ -942,7 +941,7 @@ void LoadSector(const char *FileName, int SectorX, int SectorY, int SectorZ){
 	TReadScriptFile Script;
 	try{
 		Script.open(FileName);
-		print(1, "Lade Sektor %d/%d/%d ...\n", SectorX, SectorY, SectorZ);
+		print(3, "Lade Sektor %d/%d/%d ...\n", SectorX, SectorY, SectorZ);
 
 		int OffsetX = -1;
 		int OffsetY = -1;

@@ -1,5 +1,13 @@
 #include "script.hh"
 
+#if defined(_WIN32)
+#define script_getc(f) _getc_nolock(f)
+#define script_ungetc(c, f) _ungetc_nolock(c, f)
+#else
+#define script_getc(f) getc_unlocked(f)
+#define script_ungetc(c, f) ungetc(c, f)
+#endif
+
 // NOTE(fusion): Throwing a character array on the stack as an exception won't
 // work because it implicitly decays into a character pointer which would then
 // point to invalid data when actually parsed. It is the reason `ErrorString` is
@@ -119,6 +127,8 @@ void TReadScriptFile::open(const char *FileName){
 		throw "Cannot open script-file";
 	}
 
+	setvbuf(this->File[Depth], NULL, _IOFBF, 65536);
+
 	this->Line[Depth] = 1;
 	this->RecursionDepth = Depth;
 }
@@ -175,7 +185,7 @@ void TReadScriptFile::nextToken(void){
 	}
 
 	// NOTE(fusion): Reset any previous token state.
-	memset(this->String, 0, sizeof(this->String));
+	this->String[0] = 0;
 	this->Number = 0;
 	this->CoordX = 0;
 	this->CoordY = 0;
@@ -193,7 +203,7 @@ void TReadScriptFile::nextToken(void){
 
 		int c;
 		do{
-			c = getc(File);
+			c = script_getc(File);
 			if(c == '\n'){
 				this->Line[Depth] += 1;
 			}
@@ -212,7 +222,7 @@ void TReadScriptFile::nextToken(void){
 		switch(c){
 			case '#':{ // COMMENT
 				while(true){
-					int next = getc(File);
+					int next = script_getc(File);
 					if(next == '\n' || next == EOF){
 						if(next == '\n'){
 							this->Line[Depth] += 1;
@@ -224,7 +234,7 @@ void TReadScriptFile::nextToken(void){
 			}
 
 			case '@':{ // INCLUDE
-				int next = getc(File);
+				int next = script_getc(File);
 				if(next == EOF){
 					this->error("unexpected end of file");
 				}else if(next != '"'){
@@ -236,7 +246,7 @@ void TReadScriptFile::nextToken(void){
 					// TODO(fusion): I don't think new lines are even allowed in
 					// file names but we should keep track of the line number even
 					// if they happen here.
-					next = getc(File);
+					next = script_getc(File);
 					if(next == EOF){
 						this->error("unexpected end of file");
 					}else if(next == '"'){
@@ -249,6 +259,7 @@ void TReadScriptFile::nextToken(void){
 					this->String[StringLength] = (char)next;
 					StringLength += 1;
 				}
+				this->String[StringLength] = 0;
 
 				// TODO(fusion): Maybe check if the path is empty?
 				this->open(this->String);
@@ -256,7 +267,7 @@ void TReadScriptFile::nextToken(void){
 				// NOTE(fusion): This is the only place we parse a string without
 				// returning it as a token. We need to reset it to make sure any
 				// subsequent string-like token will be properly parsed.
-				memset(this->String, 0, sizeof(this->String));
+				this->String[0] = 0;
 
 				break;
 			}
@@ -264,11 +275,11 @@ void TReadScriptFile::nextToken(void){
 			case '"':{ // STRING
 				int StringLength = 0;
 				while(true){
-					int next = getc(File);
+					int next = script_getc(File);
 					if(next == EOF){
 						this->error("unexpected end of file");
 					}else if(next == '\\'){
-						next = getc(File);
+						next = script_getc(File);
 						if(next == EOF){
 							this->error("unexpected end of file");
 						}else if(next == 'n'){
@@ -288,6 +299,7 @@ void TReadScriptFile::nextToken(void){
 					this->String[StringLength] = (char)next;
 					StringLength += 1;
 				}
+				this->String[StringLength] = 0;
 				this->Token = STRING;
 				return;
 			}
@@ -296,7 +308,7 @@ void TReadScriptFile::nextToken(void){
 				// NOTE(fusion): X-Coordinate or SPECIAL '['.
 				int Sign = -1;
 				int Coord = 0;
-				int next = getc(File);
+				int next = script_getc(File);
 				if(isDigit(next)){
 					Sign = 1;
 					Coord = next - '0';
@@ -304,13 +316,13 @@ void TReadScriptFile::nextToken(void){
 					this->Token = SPECIAL;
 					this->Special = '[';
 					if(next != EOF){
-						ungetc(next, File);
+						script_ungetc(next, File);
 					}
 					return;
 				}
 
 				while(true){
-					next = getc(File);
+					next = script_getc(File);
 					if(next == EOF){
 						this->error("unexpected end of file");
 					}else if(isDigit(next)){
@@ -328,7 +340,7 @@ void TReadScriptFile::nextToken(void){
 				// NOTE(fusion): Y-Coordinate.
 				Sign = -1;
 				Coord = 0;
-				next = getc(File);
+				next = script_getc(File);
 				if(isDigit(next)){
 					Sign = 1;
 					Coord = next - '0';
@@ -337,7 +349,7 @@ void TReadScriptFile::nextToken(void){
 				}
 
 				while(true){
-					next = getc(File);
+					next = script_getc(File);
 					if(next == EOF){
 						this->error("unexpected end of file");
 					}else if(isDigit(next)){
@@ -355,7 +367,7 @@ void TReadScriptFile::nextToken(void){
 				// NOTE(fusion): Z-Coordinate.
 				Sign = -1;
 				Coord = 0;
-				next = getc(File);
+				next = script_getc(File);
 				if(isDigit(next)){
 					Sign = 1;
 					Coord = next - '0';
@@ -364,7 +376,7 @@ void TReadScriptFile::nextToken(void){
 				}
 
 				while(true){
-					next = getc(File);
+					next = script_getc(File);
 					if(next == EOF){
 						this->error("unexpected end of file");
 					}else if(isDigit(next)){
@@ -383,7 +395,7 @@ void TReadScriptFile::nextToken(void){
 			}
 
 			case '<':{
-				int next = getc(File);
+				int next = script_getc(File);
 				if(next == '='){
 					this->Special = 'L';
 				}else if(next == '>'){
@@ -391,7 +403,7 @@ void TReadScriptFile::nextToken(void){
 				}else{
 					this->Special = '<';
 					if(next != EOF){
-						ungetc(next, File);
+						script_ungetc(next, File);
 					}
 				}
 				this->Token = SPECIAL;
@@ -399,13 +411,13 @@ void TReadScriptFile::nextToken(void){
 			}
 
 			case '>':{
-				int next = getc(File);
+				int next = script_getc(File);
 				if(next == '='){
 					this->Special = 'G';
 				}else{
 					this->Special = '>';
 					if(next != EOF){
-						ungetc(next, File);
+						script_ungetc(next, File);
 					}
 				}
 				this->Token = SPECIAL;
@@ -413,13 +425,13 @@ void TReadScriptFile::nextToken(void){
 			}
 
 			case '-':{
-				int next = getc(File);
+				int next = script_getc(File);
 				if(next == '>'){
 					this->Special = 'I';
 				}else{
 					this->Special = '-';
 					if(next != EOF){
-						ungetc(next, File);
+						script_ungetc(next, File);
 					}
 				}
 				this->Token = SPECIAL;
@@ -431,7 +443,7 @@ void TReadScriptFile::nextToken(void){
 					int IdentLength = 1;
 					this->String[0] = (char)c;
 					while(true){
-						int next = getc(File);
+						int next = script_getc(File);
 						if(isAlpha(next) || isDigit(next) || next == '_'){
 							if(IdentLength >= (MAX_IDENT_LENGTH - 1)){
 								this->error("identifier too long");
@@ -440,11 +452,12 @@ void TReadScriptFile::nextToken(void){
 							IdentLength += 1;
 						}else{
 							if(next != EOF){
-								ungetc(next, File);
+								script_ungetc(next, File);
 							}
 							break;
 						}
 					}
+					this->String[IdentLength] = 0;
 					this->Token = IDENTIFIER;
 				}else if(isDigit(c)){
 					// NOTE(fusion): `this->Bytes` points to `this->String` (set
@@ -460,7 +473,7 @@ void TReadScriptFile::nextToken(void){
 					int BytesLength = 0;
 					int Number = c - '0';
 					while(true){
-						int next = getc(File);
+						int next = script_getc(File);
 						if(isDigit(next)){
 							Number *= 10;
 							Number += next - '0';
@@ -473,7 +486,7 @@ void TReadScriptFile::nextToken(void){
 
 							// NOTE(fusion): If there is a '-' after a number, there
 							// better be a second number.
-							next = getc(File);
+							next = script_getc(File);
 							if(next == EOF){
 								this->error("unexpected end of file");
 							}else if(!isDigit(next)){
@@ -482,7 +495,7 @@ void TReadScriptFile::nextToken(void){
 							Number = next - '0';
 						}else{
 							if(next != EOF){
-								ungetc(next, File);
+								script_ungetc(next, File);
 							}
 
 							if(BytesLength <= 0){
