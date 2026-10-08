@@ -807,14 +807,12 @@ void CheckWeight(uint32 CreatureID, Object Obj, int Count){
 		throw TOOHEAVY;
 	}
 
-	if(Creature->Type == PLAYER){
-		if(CheckRight(CreatureID, UNLIMITED_CAPACITY)){
-			return;
-		}
+	if(FreeCapacity || (Creature->Type == PLAYER && CheckRight(CreatureID, UNLIMITED_CAPACITY))){
+		return;
+	}
 
-		if(CheckRight(CreatureID, ZERO_CAPACITY)){
-			throw TOOHEAVY;
-		}
+	if(Creature->Type == PLAYER && CheckRight(CreatureID, ZERO_CAPACITY)){
+		throw TOOHEAVY;
 	}
 
 	TSkill *CarryStrength = Creature->Skills[SKILL_CARRY_STRENGTH];
@@ -848,14 +846,12 @@ void CheckWeight(uint32 CreatureID, ObjectType Type, uint32 Value, int OldWeight
 		throw TOOHEAVY;
 	}
 
-	if(Creature->Type == PLAYER){
-		if(CheckRight(CreatureID, UNLIMITED_CAPACITY)){
-			return;
-		}
+	if(FreeCapacity || (Creature->Type == PLAYER && CheckRight(CreatureID, UNLIMITED_CAPACITY))){
+		return;
+	}
 
-		if(CheckRight(CreatureID, ZERO_CAPACITY)){
-			throw TOOHEAVY;
-		}
+	if(Creature->Type == PLAYER && CheckRight(CreatureID, ZERO_CAPACITY)){
+		throw TOOHEAVY;
 	}
 
 	TSkill *CarryStrength = Creature->Skills[SKILL_CARRY_STRENGTH];

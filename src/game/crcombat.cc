@@ -238,7 +238,7 @@ int TCombat::GetDefendDamage(void){
 		return 0;
 	}
 
-	this->EarliestDefendTime = this->LastDefendTime + 2000;
+	this->EarliestDefendTime = this->LastDefendTime + DefenseInterval;
 	this->LastDefendTime = ServerMilliseconds;
 
 	int AttackMode = this->AttackMode;
@@ -637,7 +637,7 @@ void TCombat::Attack(void){
 		}
 	}
 
-	this->DelayAttack(2000);
+	this->DelayAttack(AttackInterval);
 
 	if(Target->IsDead){
 		this->StopAttack(0);
@@ -900,6 +900,9 @@ uint32 TCombat::GetMostDangerousAttacker(void){
 }
 
 void TCombat::DistributeExperiencePoints(uint32 Exp){
+	if(RateExp > 1){
+		Exp = (uint32)(Exp * RateExp);
+	}
 	TCreature *Master = this->Master;
 	print(3, "%s ist gestorben. Verteile %u EXP...\n", Master->Name, Exp);
 	if(this->CombatDamage == 0){
@@ -934,9 +937,9 @@ void TCombat::DistributeExperiencePoints(uint32 Exp){
 				// NOTE(fusion): Enable soul regeneration.
 				int AttackerLevel = Attacker->Skills[SKILL_LEVEL]->Get();
 				if(Amount >= AttackerLevel){
-					int Interval = 120;
+					int Interval = SoulRegenInterval;
 					if(((TPlayer*)Attacker)->GetActivePromotion()){
-						Interval = 15;
+						Interval = SoulRegenIntervalPromoted;
 					}
 
 					int Count = Attacker->Skills[SKILL_SOUL]->TimerValue() % Interval;

@@ -336,17 +336,22 @@ void TPlayer::Death(void){
 
 	TCreature::Death();
 
-	if(WorldType == PVP_ENFORCED){
-		this->Combat.DistributeExperiencePoints(this->Skills[SKILL_LEVEL]->Exp / 20);
+	if(WorldType == PVP_ENFORCED || ExperienceByKillingPlayers){
+		int Percent = (PVPEnforcedExpPercent > 0) ? PVPEnforcedExpPercent : 5;
+		this->Combat.DistributeExperiencePoints((this->Skills[SKILL_LEVEL]->Exp * Percent) / 100);
 	}
 
 	// TODO(fusion): Probably related to blessings?
-	int LossPercent = (this->GetActivePromotion() ? 7 : 10);
+	int BaseLoss = (DeathLosePercent > 0) ? DeathLosePercent : 10;
+	int LossPercent = (this->GetActivePromotion() ? (BaseLoss * 7 / 10) : BaseLoss);
 	for(int QuestNr = 101; QuestNr <= 105; QuestNr += 1){
 		if(this->GetQuestValue(QuestNr) != 0){
 			this->SetQuestValue(QuestNr, 0);
 			LossPercent -= 1;
 		}
+	}
+	if(LossPercent < 0){
+		LossPercent = 0;
 	}
 
 	this->Skills[SKILL_LEVEL      ]->DecreasePercent(LossPercent);
@@ -1476,6 +1481,12 @@ void TPlayer::RecordAttack(uint32 VictimID){
 		return;
 	}
 
+	if(ProtectionLevel > 1){
+		if(Victim->Skills[SKILL_LEVEL]->Get() < ProtectionLevel || this->Skills[SKILL_LEVEL]->Get() < ProtectionLevel){
+			return;
+		}
+	}
+
 	if(!Victim->InPartyWith(this, true)
 			&& !Victim->IsAttacker(this->ID, true)
 			&& !this->IsAttacker(VictimID, false)){
@@ -1525,7 +1536,7 @@ void TPlayer::RecordMurder(uint32 VictimID){
 	int Playerkilling = this->CheckPlayerkilling(Now);
 	if(Playerkilling != 0){
 		int OldPlayerkillerEnd = PlayerData->PlayerkillerEnd;
-		PlayerData->PlayerkillerEnd = Now + 2592000; // 30 days
+		PlayerData->PlayerkillerEnd = Now + RedSkullDuration;
 		if(OldPlayerkillerEnd == 0){
 			print(3, "Spieler %s ist Playerkiller.\n", this->Name);
 			AnnounceChangedCreature(this->ID, CREATURE_SKULL_CHANGED);
@@ -1580,9 +1591,9 @@ int TPlayer::CheckPlayerkilling(int Now){
 		}
 	}
 
-	if(LastDay >= 6 || LastWeek >= 10 || LastMonth >= 20){
+	if(LastDay >= KillsToBanDay || LastWeek >= KillsToBanWeek || LastMonth >= KillsToBanMonth){
 		return 2; // EXCESSIVE_KILLING ?
-	}else if(LastDay >= 3 || LastWeek >= 5 || LastMonth >= 10){
+	}else if(LastDay >= KillsToRedSkullDay || LastWeek >= KillsToRedSkullWeek || LastMonth >= KillsToRedSkullMonth){
 		return 1; // PLAYERKILLER ?
 	}else{
 		return 0;

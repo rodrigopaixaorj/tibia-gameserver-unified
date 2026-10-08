@@ -1,5 +1,6 @@
 #include "info.hh"
 #include "cr.hh"
+#include "config.hh"
 #include "magic.hh"
 
 const char *GetLiquidName(int LiquidType){
@@ -1225,7 +1226,9 @@ void GetCreatureLight(uint32 CreatureID, int *Brightness, int *Color){
 	}
 
 	int OutBrightness = 0;
-	if(Creature->Skills[SKILL_LIGHT] != NULL){
+	if(AlwaysLight){
+		OutBrightness = 15;
+	}else if(Creature->Skills[SKILL_LIGHT] != NULL){
 		OutBrightness = Creature->Skills[SKILL_LIGHT]->TimerValue();
 	}
 

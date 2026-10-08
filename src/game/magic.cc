@@ -755,15 +755,25 @@ void CheckMana(TCreature *Actor, int ManaPoints, int SoulPoints, int Delay){
 			throw NOTENOUGHMANA;
 		}
 
-		if(Soul->Get() < SoulPoints){
+		if(EnableSoulPoints && Soul->Get() < SoulPoints){
 			throw NOTENOUGHSOULPOINTS;
 		}
 
 		Mana->Change(-ManaPoints);
-		Soul->Change(-SoulPoints);
+		if(EnableSoulPoints && SoulPoints > 0){
+			Soul->Change(-SoulPoints);
+		}
 
 		if(ManaPoints > 0){
 			Actor->Skills[SKILL_MAGIC_LEVEL]->Increase(ManaPoints);
+		}
+	}
+
+	if(Delay > 0){
+		if(Delay == 1000 && SpellExhaustion > 0){
+			Delay = SpellExhaustion;
+		}else if(Delay == 2000 && RuneExhaustion > 0){
+			Delay = RuneExhaustion;
 		}
 	}
 
@@ -2648,7 +2658,7 @@ void Convince(TCreature *Actor, TCreature *Target){
 		throw ATTACKNOTALLOWED;
 	}
 
-	if(Actor->Type == PLAYER && Actor->SummonedCreatures >= 2){
+	if(Actor->Type == PLAYER && Actor->SummonedCreatures >= MaxSummonsPerPlayer){
 		throw TOOMANYSLAVES;
 	}
 
@@ -4403,8 +4413,14 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 
 	DeleteRune(Obj);
 
+	uint32 RuneDelay = (RuneExhaustion > 0) ? RuneExhaustion : 2000;
+	uint32 EarliestRuneSpellTime = ServerMilliseconds + RuneDelay;
+	if(Actor->EarliestSpellTime < EarliestRuneSpellTime){
+		Actor->EarliestSpellTime = EarliestRuneSpellTime;
+	}
+
 	if(Aggressive){
-		Actor->BlockLogout(60, false);
+		Actor->BlockLogout(InFightDuration, false);
 	}
 }
 

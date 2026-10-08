@@ -1,4 +1,5 @@
 #include "cr.hh"
+#include "config.hh"
 #include "operate.hh"
 
 #include <math.h>
@@ -397,6 +398,18 @@ void TSkillProbe::Increase(int Amount){
 		TPlayer *Player = (TPlayer*)this->Master;
 		if(CheckBit(Player->Rights, GAMEMASTER_OUTFIT) || CheckBit(Player->Rights, NO_STATISTICS) || CheckBit(Player->Rights, CHANGE_SKILLS)){
 			return;
+		}
+	}
+
+	if(this->SkNr == SKILL_MAGIC_LEVEL){
+		if(RateMagic > 1){
+			Amount *= RateMagic;
+		}
+	}else if(this->SkNr == SKILL_FIST || this->SkNr == SKILL_CLUB || this->SkNr == SKILL_SWORD ||
+	         this->SkNr == SKILL_AXE || this->SkNr == SKILL_DISTANCE || this->SkNr == SKILL_SHIELDING ||
+	         this->SkNr == SKILL_FISHING){
+		if(RateSkill > 1){
+			Amount *= RateSkill;
 		}
 	}
 
@@ -888,11 +901,11 @@ void TSkillFed::Event(int Range){
 	int Timer = this->TimerValue();
 
 	if(Timer % SecsPerHP == 0){
-		Master->Skills[SKILL_HITPOINTS]->Change(1);
+		Master->Skills[SKILL_HITPOINTS]->Change(1 * (RateHPRegen > 0 ? RateHPRegen : 1));
 	}
 
 	if(Timer % SecsPerMana == 0){
-		Master->Skills[SKILL_MANA]->Change(2);
+		Master->Skills[SKILL_MANA]->Change(2 * (RateManaRegen > 0 ? RateManaRegen : 1));
 	}
 }
 

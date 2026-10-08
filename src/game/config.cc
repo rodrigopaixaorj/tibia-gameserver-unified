@@ -94,11 +94,56 @@ char MySQL_Password[64];
 char MySQL_Database[64];
 bool MySQL_Reconnect;
 
-// Gameplay / Item Consumption Options
+// Gameplay / Rates & Multipliers
+int RateExp;
+int RateSkill;
+int RateMagic;
+int RateLoot;
+int RateSpawn;
+int RateHPRegen;
+int RateManaRegen;
+
+// Gameplay / Item Consumption & QoL
 bool RemoveChargesFromRunes;
 bool RemoveChargesFromVials;
 bool RemoveWeaponAmmunition;
 bool RemoveWeaponCharges;
+bool FreeCapacity;
+bool AlwaysLight;
+int  MaxSummonsPerPlayer;
+
+// Gameplay / Combat & Timers
+int AttackInterval;
+int DefenseInterval;
+int SpellExhaustion;
+int RuneExhaustion;
+int StairJumpExhaustion;
+
+// Gameplay / PvP & Skulls
+int ProtectionLevel;
+int KillsToRedSkullDay;
+int KillsToRedSkullWeek;
+int KillsToRedSkullMonth;
+int KillsToBanDay;
+int KillsToBanWeek;
+int KillsToBanMonth;
+int WhiteSkullDuration;
+int InFightDuration;
+int RedSkullDuration;
+
+// Gameplay / Death & Losses
+int  DeathLosePercent;
+bool ExperienceByKillingPlayers;
+int  PVPEnforcedExpPercent;
+
+// Gameplay / Soul Points
+bool EnableSoulPoints;
+int  SoulRegenInterval;
+int  SoulRegenIntervalPromoted;
+
+// Gameplay / Houses
+int  HouseBuyLevel;
+bool HouseOnlyPremium;
 
 static char PasswordKey[9] = "Pm-,o%yD";
 
@@ -168,11 +213,50 @@ void ReadConfig(void){
 	strncpy(MySQL_Database, "tibia", sizeof(MySQL_Database) - 1);
 	MySQL_Reconnect = true;
 
-	// Default Gameplay / Item Consumption Settings
+	// Default Gameplay Settings
+	RateExp = 1;
+	RateSkill = 1;
+	RateMagic = 1;
+	RateLoot = 1;
+	RateSpawn = 1;
+	RateHPRegen = 1;
+	RateManaRegen = 1;
+
 	RemoveChargesFromRunes = true;
 	RemoveChargesFromVials = true;
 	RemoveWeaponAmmunition = true;
 	RemoveWeaponCharges = true;
+	FreeCapacity = false;
+	AlwaysLight = false;
+	MaxSummonsPerPlayer = 2;
+
+	AttackInterval = 2000;
+	DefenseInterval = 2000;
+	SpellExhaustion = 1000;
+	RuneExhaustion = 2000;
+	StairJumpExhaustion = 2000;
+
+	ProtectionLevel = 1;
+	KillsToRedSkullDay = 3;
+	KillsToRedSkullWeek = 5;
+	KillsToRedSkullMonth = 10;
+	KillsToBanDay = 6;
+	KillsToBanWeek = 10;
+	KillsToBanMonth = 20;
+	WhiteSkullDuration = 900;
+	InFightDuration = 60;
+	RedSkullDuration = 2592000;
+
+	DeathLosePercent = 10;
+	ExperienceByKillingPlayers = false;
+	PVPEnforcedExpPercent = 5;
+
+	EnableSoulPoints = true;
+	SoulRegenInterval = 120;
+	SoulRegenIntervalPromoted = 15;
+
+	HouseBuyLevel = 1;
+	HouseOnlyPremium = true;
 
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
@@ -283,6 +367,20 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "mysql_reconnect") == 0 || strcmp(Identifier, "sql_reconnect") == 0){
 			const char *val = Script.readIdentifier();
 			MySQL_Reconnect = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "rate_exp") == 0 || strcmp(Identifier, "rateexp") == 0){
+			RateExp = Script.readNumber();
+		}else if(strcmp(Identifier, "rate_skill") == 0 || strcmp(Identifier, "rateskill") == 0){
+			RateSkill = Script.readNumber();
+		}else if(strcmp(Identifier, "rate_magic") == 0 || strcmp(Identifier, "ratemagic") == 0){
+			RateMagic = Script.readNumber();
+		}else if(strcmp(Identifier, "rate_loot") == 0 || strcmp(Identifier, "rateloot") == 0){
+			RateLoot = Script.readNumber();
+		}else if(strcmp(Identifier, "rate_spawn") == 0 || strcmp(Identifier, "ratespawn") == 0){
+			RateSpawn = Script.readNumber();
+		}else if(strcmp(Identifier, "rate_hp_regen") == 0 || strcmp(Identifier, "ratehpregen") == 0){
+			RateHPRegen = Script.readNumber();
+		}else if(strcmp(Identifier, "rate_mana_regen") == 0 || strcmp(Identifier, "ratemanaregen") == 0){
+			RateManaRegen = Script.readNumber();
 		}else if(strcmp(Identifier, "remove_charges_from_runes") == 0 || strcmp(Identifier, "removechargesfromrunes") == 0){
 			const char *val = Script.readIdentifier();
 			RemoveChargesFromRunes = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
@@ -295,6 +393,75 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "remove_weapon_charges") == 0 || strcmp(Identifier, "removeweaponcharges") == 0){
 			const char *val = Script.readIdentifier();
 			RemoveWeaponCharges = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "free_capacity") == 0 || strcmp(Identifier, "freecapacity") == 0){
+			const char *val = Script.readIdentifier();
+			FreeCapacity = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "always_light") == 0 || strcmp(Identifier, "alwayslight") == 0 || strcmp(Identifier, "ambient_light") == 0){
+			const char *val = Script.readIdentifier();
+			AlwaysLight = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "max_summons_per_player") == 0 || strcmp(Identifier, "maxsummonsperplayer") == 0){
+			MaxSummonsPerPlayer = Script.readNumber();
+		}else if(strcmp(Identifier, "attack_interval") == 0 || strcmp(Identifier, "attackinterval") == 0 || strcmp(Identifier, "attack_speed") == 0){
+			AttackInterval = Script.readNumber();
+		}else if(strcmp(Identifier, "defense_interval") == 0 || strcmp(Identifier, "defenseinterval") == 0){
+			DefenseInterval = Script.readNumber();
+		}else if(strcmp(Identifier, "spell_exhaustion") == 0 || strcmp(Identifier, "spellexhaustion") == 0){
+			SpellExhaustion = Script.readNumber();
+		}else if(strcmp(Identifier, "rune_exhaustion") == 0 || strcmp(Identifier, "runeexhaustion") == 0){
+			RuneExhaustion = Script.readNumber();
+		}else if(strcmp(Identifier, "stair_jump_exhaustion") == 0 || strcmp(Identifier, "stairjumpexhaustion") == 0){
+			StairJumpExhaustion = Script.readNumber();
+		}else if(strcmp(Identifier, "protection_level") == 0 || strcmp(Identifier, "protectionlevel") == 0){
+			ProtectionLevel = Script.readNumber();
+		}else if(strcmp(Identifier, "kills_to_red_skull") == 0 || strcmp(Identifier, "killstoredskull") == 0 || strcmp(Identifier, "kills_to_red_skull_day") == 0){
+			KillsToRedSkullDay = Script.readNumber();
+		}else if(strcmp(Identifier, "kills_to_red_skull_week") == 0){
+			KillsToRedSkullWeek = Script.readNumber();
+		}else if(strcmp(Identifier, "kills_to_red_skull_month") == 0){
+			KillsToRedSkullMonth = Script.readNumber();
+		}else if(strcmp(Identifier, "kills_to_ban") == 0 || strcmp(Identifier, "killstoban") == 0 || strcmp(Identifier, "kills_to_ban_day") == 0 || strcmp(Identifier, "kills_to_black_skull") == 0){
+			KillsToBanDay = Script.readNumber();
+		}else if(strcmp(Identifier, "kills_to_ban_week") == 0){
+			KillsToBanWeek = Script.readNumber();
+		}else if(strcmp(Identifier, "kills_to_ban_month") == 0){
+			KillsToBanMonth = Script.readNumber();
+		}else if(strcmp(Identifier, "white_skull_time") == 0 || strcmp(Identifier, "whiteskulltime") == 0 || strcmp(Identifier, "white_skull_duration") == 0){
+			WhiteSkullDuration = Script.readNumber();
+		}else if(strcmp(Identifier, "in_fight_time") == 0 || strcmp(Identifier, "infighttime") == 0 || strcmp(Identifier, "pz_locked") == 0 || strcmp(Identifier, "pzlocked") == 0){
+			InFightDuration = Script.readNumber();
+			if(InFightDuration > 1000) InFightDuration /= 1000;
+		}else if(strcmp(Identifier, "red_skull_duration") == 0 || strcmp(Identifier, "redskullduration") == 0){
+			RedSkullDuration = Script.readNumber();
+		}else if(strcmp(Identifier, "death_lose_percent") == 0 || strcmp(Identifier, "deathlosepercent") == 0){
+			DeathLosePercent = Script.readNumber();
+		}else if(strcmp(Identifier, "experience_by_killing_players") == 0 || strcmp(Identifier, "experiencebykillingplayers") == 0){
+			const char *val = Script.readIdentifier();
+			ExperienceByKillingPlayers = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "pvp_enforced_exp_percent") == 0 || strcmp(Identifier, "pvpenforcedexppercent") == 0){
+			PVPEnforcedExpPercent = Script.readNumber();
+		}else if(strcmp(Identifier, "enable_soul_points") == 0 || strcmp(Identifier, "enablesoulpoints") == 0 || strcmp(Identifier, "stamina_system") == 0){
+			const char *val = Script.readIdentifier();
+			EnableSoulPoints = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "soul_regen_interval") == 0 || strcmp(Identifier, "soulregeninterval") == 0){
+			SoulRegenInterval = Script.readNumber();
+		}else if(strcmp(Identifier, "soul_regen_interval_promoted") == 0 || strcmp(Identifier, "soulregenintervalpromoted") == 0){
+			SoulRegenIntervalPromoted = Script.readNumber();
+		}else if(strcmp(Identifier, "house_buy_level") == 0 || strcmp(Identifier, "housebuylevel") == 0){
+			HouseBuyLevel = Script.readNumber();
+		}else if(strcmp(Identifier, "house_only_premium") == 0 || strcmp(Identifier, "houseonlypremium") == 0){
+			const char *val = Script.readIdentifier();
+			HouseOnlyPremium = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "world_type") == 0 || strcmp(Identifier, "worldtype") == 0){
+			const char *val = Script.readString();
+			if(val && val[0] != 0){
+				if(strcmp(val, "pvp") == 0 || strcmp(val, "normal") == 0 || strcmp(val, "open-pvp") == 0){
+					WorldType = NORMAL;
+				}else if(strcmp(val, "no-pvp") == 0 || strcmp(val, "non-pvp") == 0 || strcmp(val, "optional-pvp") == 0){
+					WorldType = NON_PVP;
+				}else if(strcmp(val, "pvp-enforced") == 0 || strcmp(val, "hardcore-pvp") == 0){
+					WorldType = PVP_ENFORCED;
+				}
+			}
 		}else if(strcmp(Identifier, "rsakeyfile") == 0 || strcmp(Identifier, "rsa_key_file") == 0){
 			Script.readString();
 		}else if(strcmp(Identifier, "motd") == 0){

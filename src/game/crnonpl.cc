@@ -1310,6 +1310,12 @@ void StartMonsterhomeTimer(int Nr){
 	}
 
 	int MaxTimer = MH->RegenerationTime;
+	if(RateSpawn > 1){
+		MaxTimer = MaxTimer / RateSpawn;
+		if(MaxTimer < 1){
+			MaxTimer = 1;
+		}
+	}
 	int NumPlayers = GetNumberOfPlayers();
 	if(NumPlayers > 800){
 		MaxTimer = (MaxTimer * 2) / 5;
@@ -2036,7 +2042,14 @@ TMonster::TMonster(int Race, int x, int y, int z, int Home, uint32 MasterID) :
 								0);
 			for(int i = 1; i <= RaceData[Race].Items; i += 1){
 				TItemData *ItemData = RaceData[Race].Item.at(i);
-				if(random(0, 999) > ItemData->Probability){
+				int Prob = ItemData->Probability;
+				if(RateLoot > 1){
+					Prob *= RateLoot;
+					if(Prob > 1000){
+						Prob = 1000;
+					}
+				}
+				if(random(0, 999) > Prob){
 					continue;
 				}
 

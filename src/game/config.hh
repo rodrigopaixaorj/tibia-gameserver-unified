@@ -66,11 +66,56 @@ extern char MySQL_Password[64];
 extern char MySQL_Database[64];
 extern bool MySQL_Reconnect;
 
-// Gameplay / Item Consumption Options
+// Gameplay / Rates & Multipliers
+extern int RateExp;
+extern int RateSkill;
+extern int RateMagic;
+extern int RateLoot;
+extern int RateSpawn;
+extern int RateHPRegen;
+extern int RateManaRegen;
+
+// Gameplay / Item Consumption & QoL
 extern bool RemoveChargesFromRunes;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;
 extern bool RemoveWeaponCharges;
+extern bool FreeCapacity;
+extern bool AlwaysLight;
+extern int  MaxSummonsPerPlayer;
+
+// Gameplay / Combat & Timers
+extern int AttackInterval;
+extern int DefenseInterval;
+extern int SpellExhaustion;
+extern int RuneExhaustion;
+extern int StairJumpExhaustion;
+
+// Gameplay / PvP & Skulls
+extern int ProtectionLevel;
+extern int KillsToRedSkullDay;
+extern int KillsToRedSkullWeek;
+extern int KillsToRedSkullMonth;
+extern int KillsToBanDay;
+extern int KillsToBanWeek;
+extern int KillsToBanMonth;
+extern int WhiteSkullDuration;
+extern int InFightDuration;
+extern int RedSkullDuration;
+
+// Gameplay / Death & Losses
+extern int  DeathLosePercent;
+extern bool ExperienceByKillingPlayers;
+extern int  PVPEnforcedExpPercent;
+
+// Gameplay / Soul Points
+extern bool EnableSoulPoints;
+extern int  SoulRegenInterval;
+extern int  SoulRegenIntervalPromoted;
+
+// Gameplay / Houses
+extern int  HouseBuyLevel;
+extern bool HouseOnlyPremium;
 
 void ReadConfig(void);
 
