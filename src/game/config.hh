@@ -56,6 +56,16 @@ extern TDatabaseSettings MANAGER_DATABASE;
 extern int NumberOfQueryManagers;
 extern TQueryManagerSettings QUERY_MANAGER[10];
 
+// Database Engine Configuration (SQLite / MySQL / MariaDB)
+extern char DB_Type[16];
+extern char DB_File[256];
+extern char MySQL_Host[128];
+extern int  MySQL_Port;
+extern char MySQL_User[64];
+extern char MySQL_Password[64];
+extern char MySQL_Database[64];
+extern bool MySQL_Reconnect;
+
 void ReadConfig(void);
 
 #endif //TIBIA_CONFIG_HH_

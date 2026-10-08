@@ -1,6 +1,7 @@
 #include "config.hh"
 #include "script.hh"
 #include <filesystem>
+#include <cstring>
 
 static void NormalizeDataPath(char *Path, const char *SubDir){
 	namespace fs = std::filesystem;
@@ -83,6 +84,16 @@ TDatabaseSettings MANAGER_DATABASE;
 int NumberOfQueryManagers;
 TQueryManagerSettings QUERY_MANAGER[10];
 
+// Database Engine Configuration (SQLite / MySQL / MariaDB)
+char DB_Type[16];
+char DB_File[256];
+char MySQL_Host[128];
+int  MySQL_Port;
+char MySQL_User[64];
+char MySQL_Password[64];
+char MySQL_Database[64];
+bool MySQL_Reconnect;
+
 static char PasswordKey[9] = "Pm-,o%yD";
 
 static void DisguisePassword(char *Password, char *Key){
@@ -106,10 +117,6 @@ static void DisguisePassword(char *Password, char *Key){
 }
 
 void ReadConfig(void){
-	// TODO(fusion): We're not properly initializing these values, specially the
-	// `TDatabaseSettings` ones. It is probably not that big of a deal anyway since
-	// we only call this function once at startup and all this memory should be zero
-	// initialized.
 	PrivateWorld = false;
 	strncpy(GameAddress, "0.0.0.0", 8);
 	SHMKey = 0;
@@ -145,6 +152,16 @@ void ReadConfig(void){
 	FORUM_DATABASE.Database[0] = 0;
 	MANAGER_DATABASE.Database[0] = 0;
 
+	// Default Database Settings
+	strncpy(DB_Type, "sqlite", sizeof(DB_Type) - 1);
+	strncpy(DB_File, "tibia.db", sizeof(DB_File) - 1);
+	strncpy(MySQL_Host, "127.0.0.1", sizeof(MySQL_Host) - 1);
+	MySQL_Port = 3306;
+	strncpy(MySQL_User, "root", sizeof(MySQL_User) - 1);
+	MySQL_Password[0] = 0;
+	strncpy(MySQL_Database, "tibia", sizeof(MySQL_Database) - 1);
+	MySQL_Reconnect = true;
+
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
 		".tibia",
@@ -171,29 +188,28 @@ void ReadConfig(void){
 			}
 
 			char Identifier[MAX_IDENT_LENGTH];
-			strcpy(Identifier, Script.getIdentifier());
+			strncpy(Identifier, Script.getIdentifier(), sizeof(Identifier) - 1);
+			Identifier[sizeof(Identifier) - 1] = 0;
 			Script.readSymbol('=');
 
-		// TODO(fusion): Ughh... Get rid of all `strcpy`s. A malicious configuration
-		// file could do a lot of damage.
 		if(strcmp(Identifier, "binpath") == 0 || strcmp(Identifier, "bin_path") == 0){
-			strcpy(BINPATH, Script.readString());
+			strncpy(BINPATH, Script.readString(), sizeof(BINPATH) - 1);
 		}else if(strcmp(Identifier, "mappath") == 0 || strcmp(Identifier, "map_path") == 0){
-			strcpy(MAPPATH, Script.readString());
+			strncpy(MAPPATH, Script.readString(), sizeof(MAPPATH) - 1);
 		}else if(strcmp(Identifier, "origmappath") == 0 || strcmp(Identifier, "orig_map_path") == 0){
-			strcpy(ORIGMAPPATH, Script.readString());
+			strncpy(ORIGMAPPATH, Script.readString(), sizeof(ORIGMAPPATH) - 1);
 		}else if(strcmp(Identifier, "datapath") == 0 || strcmp(Identifier, "data_path") == 0){
-			strcpy(DATAPATH, Script.readString());
+			strncpy(DATAPATH, Script.readString(), sizeof(DATAPATH) - 1);
 		}else if(strcmp(Identifier, "monsterpath") == 0 || strcmp(Identifier, "monster_path") == 0){
-			strcpy(MONSTERPATH, Script.readString());
+			strncpy(MONSTERPATH, Script.readString(), sizeof(MONSTERPATH) - 1);
 		}else if(strcmp(Identifier, "npcpath") == 0 || strcmp(Identifier, "npc_path") == 0){
-			strcpy(NPCPATH, Script.readString());
+			strncpy(NPCPATH, Script.readString(), sizeof(NPCPATH) - 1);
 		}else if(strcmp(Identifier, "userpath") == 0 || strcmp(Identifier, "user_path") == 0){
-			strcpy(USERPATH, Script.readString());
+			strncpy(USERPATH, Script.readString(), sizeof(USERPATH) - 1);
 		}else if(strcmp(Identifier, "logpath") == 0 || strcmp(Identifier, "log_path") == 0){
-			strcpy(LOGPATH, Script.readString());
+			strncpy(LOGPATH, Script.readString(), sizeof(LOGPATH) - 1);
 		}else if(strcmp(Identifier, "savepath") == 0 || strcmp(Identifier, "save_path") == 0){
-			strcpy(SAVEPATH, Script.readString());
+			strncpy(SAVEPATH, Script.readString(), sizeof(SAVEPATH) - 1);
 		}else if(strcmp(Identifier, "shm") == 0){
 			SHMKey = Script.readNumber();
 		}else if(strcmp(Identifier, "gameport") == 0 || strcmp(Identifier, "game_port") == 0){
@@ -203,9 +219,9 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "adminport") == 0 || strcmp(Identifier, "admin_port") == 0){
 			AdminPort = Script.readNumber();
 		}else if(strcmp(Identifier, "adminaddress") == 0 || strcmp(Identifier, "admin_address") == 0){
-			strcpy(AdminAddress, Script.readString());
+			strncpy(AdminAddress, Script.readString(), sizeof(AdminAddress) - 1);
 		}else if(strcmp(Identifier, "bindaddress") == 0 || strcmp(Identifier, "bind_address") == 0){
-			strcpy(GameAddress, Script.readString());
+			strncpy(GameAddress, Script.readString(), sizeof(GameAddress) - 1);
 		}else if(strcmp(Identifier, "worldaddress") == 0 || strcmp(Identifier, "world_address") == 0){
 			Script.readString();
 		}else if(strcmp(Identifier, "maxplayers") == 0 || strcmp(Identifier, "max_players") == 0){
@@ -214,8 +230,47 @@ void ReadConfig(void){
 			Script.readNumber();
 		}else if(strcmp(Identifier, "connectiontimeout") == 0 || strcmp(Identifier, "connection_timeout") == 0){
 			Script.readNumber();
-		}else if(strcmp(Identifier, "databasefile") == 0 || strcmp(Identifier, "database_file") == 0){
-			Script.readString();
+		}else if(strcmp(Identifier, "db_type") == 0 || strcmp(Identifier, "dbtype") == 0 || strcmp(Identifier, "sql_type") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(DB_Type, val, sizeof(DB_Type) - 1);
+				DB_Type[sizeof(DB_Type) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "databasefile") == 0 || strcmp(Identifier, "database_file") == 0 || strcmp(Identifier, "db_file") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(DB_File, val, sizeof(DB_File) - 1);
+				DB_File[sizeof(DB_File) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "mysql_host") == 0 || strcmp(Identifier, "mysqlhost") == 0 || strcmp(Identifier, "sql_host") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(MySQL_Host, val, sizeof(MySQL_Host) - 1);
+				MySQL_Host[sizeof(MySQL_Host) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "mysql_port") == 0 || strcmp(Identifier, "mysqlport") == 0 || strcmp(Identifier, "sql_port") == 0){
+			MySQL_Port = Script.readNumber();
+		}else if(strcmp(Identifier, "mysql_user") == 0 || strcmp(Identifier, "mysqluser") == 0 || strcmp(Identifier, "sql_user") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(MySQL_User, val, sizeof(MySQL_User) - 1);
+				MySQL_User[sizeof(MySQL_User) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "mysql_password") == 0 || strcmp(Identifier, "mysql_pass") == 0 || strcmp(Identifier, "mysqlpassword") == 0 || strcmp(Identifier, "sql_password") == 0 || strcmp(Identifier, "sql_pass") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(MySQL_Password, val, sizeof(MySQL_Password) - 1);
+				MySQL_Password[sizeof(MySQL_Password) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "mysql_database") == 0 || strcmp(Identifier, "mysql_db") == 0 || strcmp(Identifier, "mysqldatabase") == 0 || strcmp(Identifier, "sql_db") == 0 || strcmp(Identifier, "sql_database") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(MySQL_Database, val, sizeof(MySQL_Database) - 1);
+				MySQL_Database[sizeof(MySQL_Database) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "mysql_reconnect") == 0 || strcmp(Identifier, "sql_reconnect") == 0){
+			const char *val = Script.readIdentifier();
+			MySQL_Reconnect = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "rsakeyfile") == 0 || strcmp(Identifier, "rsa_key_file") == 0){
 			Script.readString();
 		}else if(strcmp(Identifier, "motd") == 0){
@@ -223,95 +278,95 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "querymanagerport") == 0){
 			QueryManagerPort = Script.readNumber();
 		}else if(strcmp(Identifier, "querymanageraddress") == 0){
-			strcpy(QueryManagerAddress, Script.readString());
+			strncpy(QueryManagerAddress, Script.readString(), sizeof(QueryManagerAddress) - 1);
 		}else if(strcmp(Identifier, "querymanageradminpw") == 0){
-			strcpy(QueryManagerAdminPW, Script.readString());
+			strncpy(QueryManagerAdminPW, Script.readString(), sizeof(QueryManagerAdminPW) - 1);
 		}else if(strcmp(Identifier, "querymanagergamepw") == 0){
-			strcpy(QueryManagerGamePW, Script.readString());
+			strncpy(QueryManagerGamePW, Script.readString(), sizeof(QueryManagerGamePW) - 1);
 		}else if(strcmp(Identifier, "querymanagerwebpw") == 0){
-			strcpy(QueryManagerWebPW, Script.readString());
+			strncpy(QueryManagerWebPW, Script.readString(), sizeof(QueryManagerWebPW) - 1);
 		}else if(strcmp(Identifier, "debuglevel") == 0){
 			DebugLevel = Script.readNumber();
 		}else if(strcmp(Identifier, "state") == 0){
 			PrivateWorld = (strcmp(Script.readIdentifier(), "private") == 0);
 		}else if(strcmp(Identifier, "world") == 0 || strcmp(Identifier, "world_name") == 0 || strcmp(Identifier, "worldname") == 0){
-			strcpy(WorldName, Script.readString());
+			strncpy(WorldName, Script.readString(), sizeof(WorldName) - 1);
 		}else if(strcmp(Identifier, "beat") == 0){
 			Beat = Script.readNumber();
 		}else if(strcmp(Identifier, "admindatabase") == 0){
 			Script.readSymbol('(');
-			strcpy(ADMIN_DATABASE.Product, Script.readIdentifier());
+			strncpy(ADMIN_DATABASE.Product, Script.readIdentifier(), sizeof(ADMIN_DATABASE.Product) - 1);
 			Script.readSymbol(',');
-			strcpy(ADMIN_DATABASE.Database, Script.readString());
+			strncpy(ADMIN_DATABASE.Database, Script.readString(), sizeof(ADMIN_DATABASE.Database) - 1);
 			Script.readSymbol(',');
-			strcpy(ADMIN_DATABASE.Login, Script.readString());
+			strncpy(ADMIN_DATABASE.Login, Script.readString(), sizeof(ADMIN_DATABASE.Login) - 1);
 			Script.readSymbol(',');
-			strcpy(ADMIN_DATABASE.Password, Script.readString());
+			strncpy(ADMIN_DATABASE.Password, Script.readString(), sizeof(ADMIN_DATABASE.Password) - 1);
 			DisguisePassword(ADMIN_DATABASE.Password, PasswordKey);
 			Script.readSymbol(',');
-			strcpy(ADMIN_DATABASE.Host, Script.readString());
+			strncpy(ADMIN_DATABASE.Host, Script.readString(), sizeof(ADMIN_DATABASE.Host) - 1);
 			Script.readSymbol(',');
-			strcpy(ADMIN_DATABASE.Port, Script.readString());
+			strncpy(ADMIN_DATABASE.Port, Script.readString(), sizeof(ADMIN_DATABASE.Port) - 1);
 			Script.readSymbol(')');
 		}else if(strcmp(Identifier, "volatiledatabase") == 0){
 			Script.readSymbol('(');
-			strcpy(VOLATILE_DATABASE.Product, Script.readIdentifier());
+			strncpy(VOLATILE_DATABASE.Product, Script.readIdentifier(), sizeof(VOLATILE_DATABASE.Product) - 1);
 			Script.readSymbol(',');
-			strcpy(VOLATILE_DATABASE.Database, Script.readString());
+			strncpy(VOLATILE_DATABASE.Database, Script.readString(), sizeof(VOLATILE_DATABASE.Database) - 1);
 			Script.readSymbol(',');
-			strcpy(VOLATILE_DATABASE.Login, Script.readString());
+			strncpy(VOLATILE_DATABASE.Login, Script.readString(), sizeof(VOLATILE_DATABASE.Login) - 1);
 			Script.readSymbol(',');
-			strcpy(VOLATILE_DATABASE.Password, Script.readString());
+			strncpy(VOLATILE_DATABASE.Password, Script.readString(), sizeof(VOLATILE_DATABASE.Password) - 1);
 			DisguisePassword(VOLATILE_DATABASE.Password, PasswordKey);
 			Script.readSymbol(',');
-			strcpy(VOLATILE_DATABASE.Host, Script.readString());
+			strncpy(VOLATILE_DATABASE.Host, Script.readString(), sizeof(VOLATILE_DATABASE.Host) - 1);
 			Script.readSymbol(',');
-			strcpy(VOLATILE_DATABASE.Port, Script.readString());
+			strncpy(VOLATILE_DATABASE.Port, Script.readString(), sizeof(VOLATILE_DATABASE.Port) - 1);
 			Script.readSymbol(')');
 		}else if(strcmp(Identifier, "webdatabase") == 0){
 			Script.readSymbol('(');
-			strcpy(WEB_DATABASE.Product, Script.readIdentifier());
+			strncpy(WEB_DATABASE.Product, Script.readIdentifier(), sizeof(WEB_DATABASE.Product) - 1);
 			Script.readSymbol(',');
-			strcpy(WEB_DATABASE.Database, Script.readString());
+			strncpy(WEB_DATABASE.Database, Script.readString(), sizeof(WEB_DATABASE.Database) - 1);
 			Script.readSymbol(',');
-			strcpy(WEB_DATABASE.Login, Script.readString());
+			strncpy(WEB_DATABASE.Login, Script.readString(), sizeof(WEB_DATABASE.Login) - 1);
 			Script.readSymbol(',');
-			strcpy(WEB_DATABASE.Password, Script.readString());
+			strncpy(WEB_DATABASE.Password, Script.readString(), sizeof(WEB_DATABASE.Password) - 1);
 			DisguisePassword(WEB_DATABASE.Password, PasswordKey);
 			Script.readSymbol(',');
-			strcpy(WEB_DATABASE.Host, Script.readString());
+			strncpy(WEB_DATABASE.Host, Script.readString(), sizeof(WEB_DATABASE.Host) - 1);
 			Script.readSymbol(',');
-			strcpy(WEB_DATABASE.Port, Script.readString());
+			strncpy(WEB_DATABASE.Port, Script.readString(), sizeof(WEB_DATABASE.Port) - 1);
 			Script.readSymbol(')');
 		}else if(strcmp(Identifier, "forumdatabase") == 0){
 			Script.readSymbol('(');
-			strcpy(FORUM_DATABASE.Product, Script.readIdentifier());
+			strncpy(FORUM_DATABASE.Product, Script.readIdentifier(), sizeof(FORUM_DATABASE.Product) - 1);
 			Script.readSymbol(',');
-			strcpy(FORUM_DATABASE.Database, Script.readString());
+			strncpy(FORUM_DATABASE.Database, Script.readString(), sizeof(FORUM_DATABASE.Database) - 1);
 			Script.readSymbol(',');
-			strcpy(FORUM_DATABASE.Login, Script.readString());
+			strncpy(FORUM_DATABASE.Login, Script.readString(), sizeof(FORUM_DATABASE.Login) - 1);
 			Script.readSymbol(',');
-			strcpy(FORUM_DATABASE.Password, Script.readString());
+			strncpy(FORUM_DATABASE.Password, Script.readString(), sizeof(FORUM_DATABASE.Password) - 1);
 			DisguisePassword(FORUM_DATABASE.Password, PasswordKey);
 			Script.readSymbol(',');
-			strcpy(FORUM_DATABASE.Host, Script.readString());
+			strncpy(FORUM_DATABASE.Host, Script.readString(), sizeof(FORUM_DATABASE.Host) - 1);
 			Script.readSymbol(',');
-			strcpy(FORUM_DATABASE.Port, Script.readString());
+			strncpy(FORUM_DATABASE.Port, Script.readString(), sizeof(FORUM_DATABASE.Port) - 1);
 			Script.readSymbol(')');
 		}else if(strcmp(Identifier, "managerdatabase") == 0){
 			Script.readSymbol('(');
-			strcpy(MANAGER_DATABASE.Product, Script.readIdentifier());
+			strncpy(MANAGER_DATABASE.Product, Script.readIdentifier(), sizeof(MANAGER_DATABASE.Product) - 1);
 			Script.readSymbol(',');
-			strcpy(MANAGER_DATABASE.Database, Script.readString());
+			strncpy(MANAGER_DATABASE.Database, Script.readString(), sizeof(MANAGER_DATABASE.Database) - 1);
 			Script.readSymbol(',');
-			strcpy(MANAGER_DATABASE.Login, Script.readString());
+			strncpy(MANAGER_DATABASE.Login, Script.readString(), sizeof(MANAGER_DATABASE.Login) - 1);
 			Script.readSymbol(',');
-			strcpy(MANAGER_DATABASE.Password, Script.readString());
+			strncpy(MANAGER_DATABASE.Password, Script.readString(), sizeof(MANAGER_DATABASE.Password) - 1);
 			DisguisePassword(MANAGER_DATABASE.Password, PasswordKey);
 			Script.readSymbol(',');
-			strcpy(MANAGER_DATABASE.Host, Script.readString());
+			strncpy(MANAGER_DATABASE.Host, Script.readString(), sizeof(MANAGER_DATABASE.Host) - 1);
 			Script.readSymbol(',');
-			strcpy(MANAGER_DATABASE.Port, Script.readString());
+			strncpy(MANAGER_DATABASE.Port, Script.readString(), sizeof(MANAGER_DATABASE.Port) - 1);
 			Script.readSymbol(')');
 		}else if(strcmp(Identifier, "querymanager") == 0){
 			Script.readSymbol('{');
@@ -320,11 +375,11 @@ void ReadConfig(void){
 					Script.error("Cannot handle more query managers");
 				}
 				Script.readSymbol('(');
-				strcpy(QUERY_MANAGER[NumberOfQueryManagers].Host, Script.readString());
+				strncpy(QUERY_MANAGER[NumberOfQueryManagers].Host, Script.readString(), sizeof(QUERY_MANAGER[NumberOfQueryManagers].Host) - 1);
 				Script.readSymbol(',');
 				QUERY_MANAGER[NumberOfQueryManagers].Port = Script.readNumber();
 				Script.readSymbol(',');
-				strcpy(QUERY_MANAGER[NumberOfQueryManagers].Password, Script.readString());
+				strncpy(QUERY_MANAGER[NumberOfQueryManagers].Password, Script.readString(), sizeof(QUERY_MANAGER[NumberOfQueryManagers].Password) - 1);
 				DisguisePassword(QUERY_MANAGER[NumberOfQueryManagers].Password, PasswordKey);
 				Script.readSymbol(')');
 				NumberOfQueryManagers += 1;

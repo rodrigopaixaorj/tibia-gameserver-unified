@@ -13,9 +13,10 @@ struct TCharacterLoginData {
 };
 
 // Database Management Interface
-bool DatabaseInit(const char *DatabaseFile);
+bool DatabaseInit(const char *DatabaseFile = nullptr);
 void DatabaseExit(void);
 bool DatabaseExecuteSchema(void);
+const char *DatabaseGetDriverName(void);
 
 // Login Service Queries
 int DB_LoginAccount(uint32 AccountID, const char *Password, const char *IPAddress,
