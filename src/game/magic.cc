@@ -4115,6 +4115,10 @@ static void DeleteRune(Object Obj){
 		throw ERROR;
 	}
 
+	if(!RemoveChargesFromRunes){
+		return;
+	}
+
 	// TODO(fusion): Should probably check if object is a rune?
 	uint32 Charges = Obj.getAttribute(CHARGES);
 	if(Charges > 1){
@@ -4434,7 +4438,9 @@ void DrinkPotion(uint32 CreatureID, Object Obj){
 		throw ERROR;
 	}
 
-	Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
+	if(RemoveChargesFromVials){
+		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
+	}
 }
 
 // Magic Init Functions

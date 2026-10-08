@@ -94,6 +94,12 @@ char MySQL_Password[64];
 char MySQL_Database[64];
 bool MySQL_Reconnect;
 
+// Gameplay / Item Consumption Options
+bool RemoveChargesFromRunes;
+bool RemoveChargesFromVials;
+bool RemoveWeaponAmmunition;
+bool RemoveWeaponCharges;
+
 static char PasswordKey[9] = "Pm-,o%yD";
 
 static void DisguisePassword(char *Password, char *Key){
@@ -161,6 +167,12 @@ void ReadConfig(void){
 	MySQL_Password[0] = 0;
 	strncpy(MySQL_Database, "tibia", sizeof(MySQL_Database) - 1);
 	MySQL_Reconnect = true;
+
+	// Default Gameplay / Item Consumption Settings
+	RemoveChargesFromRunes = true;
+	RemoveChargesFromVials = true;
+	RemoveWeaponAmmunition = true;
+	RemoveWeaponCharges = true;
 
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
@@ -271,6 +283,18 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "mysql_reconnect") == 0 || strcmp(Identifier, "sql_reconnect") == 0){
 			const char *val = Script.readIdentifier();
 			MySQL_Reconnect = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "remove_charges_from_runes") == 0 || strcmp(Identifier, "removechargesfromrunes") == 0){
+			const char *val = Script.readIdentifier();
+			RemoveChargesFromRunes = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "remove_charges_from_vials") == 0 || strcmp(Identifier, "removechargesfromvials") == 0 || strcmp(Identifier, "remove_charges_from_potions") == 0 || strcmp(Identifier, "removechargesfrompotions") == 0){
+			const char *val = Script.readIdentifier();
+			RemoveChargesFromVials = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "remove_weapon_ammunition") == 0 || strcmp(Identifier, "removeweaponammunition") == 0){
+			const char *val = Script.readIdentifier();
+			RemoveWeaponAmmunition = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "remove_weapon_charges") == 0 || strcmp(Identifier, "removeweaponcharges") == 0){
+			const char *val = Script.readIdentifier();
+			RemoveWeaponCharges = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "rsakeyfile") == 0 || strcmp(Identifier, "rsa_key_file") == 0){
 			Script.readString();
 		}else if(strcmp(Identifier, "motd") == 0){

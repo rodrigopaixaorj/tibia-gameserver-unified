@@ -264,7 +264,7 @@ int TCombat::GetDefendDamage(void){
 	Object Shield = this->Shield;
 	if(Shield != NONE){
 		ObjectType ShieldType = Shield.getObjectType();
-		if(ShieldType.getFlag(WEAROUT)){
+		if(RemoveWeaponCharges && ShieldType.getFlag(WEAROUT)){
 			uint32 RemainingUses = Shield.getAttribute(REMAININGUSES);
 			if(RemainingUses > 1){
 				Change(Shield, REMAININGUSES, RemainingUses - 1);
@@ -673,7 +673,7 @@ void TCombat::CloseAttack(TCreature *Target){
 	Object Close = this->Close;
 	if(Close != NONE){
 		ObjectType CloseType = Close.getObjectType();
-		if(CloseType.getFlag(WEAROUT)){
+		if(RemoveWeaponCharges && CloseType.getFlag(WEAROUT)){
 			uint32 RemainingUses = Close.getAttribute(REMAININGUSES);
 			if(RemainingUses > 1){
 				Change(Close, REMAININGUSES, RemainingUses - 1);
@@ -833,16 +833,18 @@ void TCombat::DistanceAttack(TCreature *Target){
 				ANIMATION_NONE, 2, &Impact, EFFECT_FIRE_BURST);
 	}
 
-	try{
-		if(random(0, 99) < Fragility){
-			Delete(this->Ammo, 1);
-		}else{
-			Move(0, this->Ammo, DropCon, 1, false, NONE);
-		}
-	}catch(RESULT r){
-		if(r != DESTROYED){
-			error("TCombat::RangeAttack: Konnte Ammo nicht verschieben/löschen"
-					" (Exception %d, [%d,%d,%d].\n", r, DropX, DropY, DropZ);
+	if(RemoveWeaponAmmunition){
+		try{
+			if(random(0, 99) < Fragility){
+				Delete(this->Ammo, 1);
+			}else{
+				Move(0, this->Ammo, DropCon, 1, false, NONE);
+			}
+		}catch(RESULT r){
+			if(r != DESTROYED){
+				error("TCombat::RangeAttack: Konnte Ammo nicht verschieben/löschen"
+						" (Exception %d, [%d,%d,%d].\n", r, DropX, DropY, DropZ);
+			}
 		}
 	}
 

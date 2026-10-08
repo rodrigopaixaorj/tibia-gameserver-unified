@@ -66,6 +66,12 @@ extern char MySQL_Password[64];
 extern char MySQL_Database[64];
 extern bool MySQL_Reconnect;
 
+// Gameplay / Item Consumption Options
+extern bool RemoveChargesFromRunes;
+extern bool RemoveChargesFromVials;
+extern bool RemoveWeaponAmmunition;
+extern bool RemoveWeaponCharges;
+
 void ReadConfig(void);
 
 #endif //TIBIA_CONFIG_HH_
