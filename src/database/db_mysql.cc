@@ -119,12 +119,12 @@ public:
 
 	bool ExecuteSchema() override {
 		const char *schemaCandidates[] = {
+			"tibia_mysql_full.sql",
+			"../tibia_mysql_full.sql",
+			"../../tibia_mysql_full.sql",
 			"schema_mysql.sql",
 			"../schema_mysql.sql",
-			"../../schema_mysql.sql",
-			"schema.sql",
-			"../schema.sql",
-			"../../schema.sql"
+			"../../schema_mysql.sql"
 		};
 		const char *schemaPath = nullptr;
 		for(const char *cand : schemaCandidates){
