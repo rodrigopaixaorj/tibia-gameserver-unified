@@ -33,7 +33,7 @@ This project unifies the **Game Server**, **Login Server**, and a **Flexible Dua
 
 * **TFS-Style Gameplay & Server Customization (`config.cfg`):**
   * **Rates & Multipliers:** Configurable experience (`rate_exp`), skill progress (`rate_skill`), magic level (`rate_magic`), loot drop rate (`rate_loot`), monster spawn timers (`rate_spawn`), and HP/Mana regeneration rates (`rate_hp_regen`, `rate_mana_regen`).
-  * **Item Consumption & QoL:** Infinite runes (`remove_charges_from_runes`), infinite potions/vials (`remove_charges_from_vials`), infinite ammunition & throwing weapons (`remove_weapon_ammunition`), unbreakable weapon charges & wearout (`remove_weapon_charges`), unlimited carry capacity (`free_capacity`), full illumination (`always_light`), and configurable summons limit (`max_summons_per_player`).
+  * **Item Consumption & QoL:** Auto-learn / free spells toggle (`learn_spells`), infinite runes (`remove_charges_from_runes`), infinite potions/vials (`remove_charges_from_vials`), infinite ammunition & throwing weapons (`remove_weapon_ammunition`), unbreakable weapon charges & wearout (`remove_weapon_charges`), unlimited carry capacity (`free_capacity`), full illumination (`always_light`), and configurable summons limit (`max_summons_per_player`).
   * **Combat & Exhaustion:** Fast-attack interval (`attack_interval`), shield defense interval (`defense_interval`), spell cooldown (`spell_exhaustion`), rune cooldown (`rune_exhaustion`), and floor change delay (`stair_jump_exhaustion`).
   * **PvP, Skulls & Frags:** Configurable world type (`world_type = "pvp" | "no-pvp" | "pvp-enforced"`), minimum PvP level (`protection_level`), daily/weekly/monthly red skull limits (`kills_to_red_skull`), automatic banishment limits (`kills_to_ban`), white skull duration (`white_skull_time`), and in-fight combat lock (`in_fight_time`).
   * **Death & Losses:** Configurable base death penalty percentage (`death_lose_percent`), PvP kill experience (`experience_by_killing_players`), and PvP-Enforced exp percentage (`pvp_enforced_exp_percent`).
@@ -199,6 +199,7 @@ The server is configured via `config.cfg` in the root directory. All parameters 
 ### 4. Gameplay & Item Consumption
 | Parameter | Default | Description |
 | :--- | :---: | :--- |
+| `learn_spells` | `false` | When `false`, spells do not need to be learned/bought from NPCs and are automatically available once Level/Magic Level requirements are met (vocation and promotion restrictions strictly apply). When `true`, spells must be learned from NPCs. |
 | `remove_charges_from_runes` | `false` | When `false`, magic runes have infinite charges and are not consumed upon use. |
 | `remove_charges_from_vials` | `false` | When `false`, potions and fluids (mana/life fluids) are not emptied upon drinking. |
 | `remove_weapon_ammunition` | `false` | When `false`, ammunition (arrows, bolts) and thrown weapons (spears, stars) are infinite. |

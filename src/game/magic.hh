@@ -13,6 +13,15 @@ enum : int {
 	FIELD_TYPE_WILDGROWTH = 5,
 };
 
+enum SpellVocationFlag: uint8 {
+	SPELL_VOC_NONE     = 0,
+	SPELL_VOC_KNIGHT   = (1 << 0), // 1
+	SPELL_VOC_PALADIN  = (1 << 1), // 2
+	SPELL_VOC_SORCERER = (1 << 2), // 4
+	SPELL_VOC_DRUID    = (1 << 3), // 8
+	SPELL_VOC_ALL      = (SPELL_VOC_KNIGHT | SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID), // 15
+};
+
 struct TImpact{
 	// VIRTUAL FUNCTIONS
 	// =========================================================================

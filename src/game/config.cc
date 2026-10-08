@@ -104,6 +104,7 @@ int RateHPRegen;
 int RateManaRegen;
 
 // Gameplay / Item Consumption & QoL
+bool LearnSpells;
 bool RemoveChargesFromRunes;
 bool RemoveChargesFromVials;
 bool RemoveWeaponAmmunition;
@@ -222,6 +223,7 @@ void ReadConfig(void){
 	RateHPRegen = 1;
 	RateManaRegen = 1;
 
+	LearnSpells = true;
 	RemoveChargesFromRunes = true;
 	RemoveChargesFromVials = true;
 	RemoveWeaponAmmunition = true;
@@ -381,6 +383,13 @@ void ReadConfig(void){
 			RateHPRegen = Script.readNumber();
 		}else if(strcmp(Identifier, "rate_mana_regen") == 0 || strcmp(Identifier, "ratemanaregen") == 0){
 			RateManaRegen = Script.readNumber();
+		}else if(strcmp(Identifier, "learn_spells") == 0 || strcmp(Identifier, "learnspells") == 0 || strcmp(Identifier, "spells_need_learning") == 0 || strcmp(Identifier, "free_spells") == 0){
+			const char *val = Script.readIdentifier();
+			if(strcmp(Identifier, "free_spells") == 0){
+				LearnSpells = !(val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+			}else{
+				LearnSpells = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+			}
 		}else if(strcmp(Identifier, "remove_charges_from_runes") == 0 || strcmp(Identifier, "removechargesfromrunes") == 0){
 			const char *val = Script.readIdentifier();
 			RemoveChargesFromRunes = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));

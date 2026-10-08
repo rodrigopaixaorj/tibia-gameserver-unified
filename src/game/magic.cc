@@ -19,6 +19,7 @@ struct TSpellList {
 	int Mana;
 	int SoulPoints;
 	int Amount;
+	uint8 Vocations;
 };
 
 struct TCircle {
@@ -616,9 +617,24 @@ void CheckSpellbook(TCreature *Actor, int SpellNr){
 		throw ERROR;
 	}
 
-	if(Actor->Type == PLAYER && !CheckRight(Actor->ID, ALL_SPELLS)
-			&& !((TPlayer*)Actor)->SpellKnown(SpellNr)){
-		throw SPELLUNKNOWN;
+	if(Actor->Type == PLAYER && !CheckRight(Actor->ID, ALL_SPELLS)){
+		if(LearnSpells){
+			if(!((TPlayer*)Actor)->SpellKnown(SpellNr)){
+				throw SPELLUNKNOWN;
+			}
+		}else{
+			if(SpellNr < 1 || SpellNr >= NARRAY(SpellList)){
+				throw SPELLUNKNOWN;
+			}
+			uint8 PlayerVoc = ((TPlayer*)Actor)->GetEffectiveProfession();
+			uint8 VocBit = (PlayerVoc >= 1 && PlayerVoc <= 4) ? (uint8)(1 << (PlayerVoc - 1)) : 0;
+			if((SpellList[SpellNr].Vocations & VocBit) == 0){
+				throw SPELLUNKNOWN;
+			}
+			if(SpellNr >= 92 && SpellNr <= 95 && !((TPlayer*)Actor)->GetActivePromotion()){
+				throw SPELLUNKNOWN;
+			}
+		}
 	}
 }
 
@@ -3914,8 +3930,28 @@ void GetSpellbook(uint32 CharacterID, char *Buffer){
 				SpellNr < NARRAY(SpellList);
 				SpellNr += 1){
 			TSpellList *Spell = &SpellList[SpellNr];
-			if((int)Spell->Level != Level || !Player->SpellKnown(SpellNr)){
+			if((int)Spell->Level != Level){
 				continue;
+			}
+			if(LearnSpells){
+				if(!Player->SpellKnown(SpellNr)){
+					continue;
+				}
+			}else{
+				if(Spell->Vocations == SPELL_VOC_NONE && !CheckRight(Player->ID, ALL_SPELLS)){
+					continue;
+				}
+				uint8 PlayerVoc = Player->GetEffectiveProfession();
+				uint8 VocBit = (PlayerVoc >= 1 && PlayerVoc <= 4) ? (uint8)(1 << (PlayerVoc - 1)) : 0;
+				if((Spell->Vocations & VocBit) == 0 && !CheckRight(Player->ID, ALL_SPELLS)){
+					continue;
+				}
+				if(SpellNr >= 92 && SpellNr <= 95 && !Player->GetActivePromotion() && !CheckRight(Player->ID, ALL_SPELLS)){
+					continue;
+				}
+				if((int)Player->Skills[SKILL_LEVEL]->Get() < Level && !CheckRight(Player->ID, ALL_SPELLS)){
+					continue;
+				}
 			}
 
 			if(First){
@@ -4503,6 +4539,7 @@ static TSpellList *CreateSpell(int SpellNr, ...){
 	ASSERT(SpellNr < NARRAY(SpellList));
 	int SyllableCount = 0;
 	TSpellList *Spell = &SpellList[SpellNr];
+	Spell->Vocations = SPELL_VOC_NONE;
 
 	va_list ap;
 	va_start(ap, SpellNr);
@@ -4541,18 +4578,21 @@ static void InitSpells(void){
 	Spell->Level = 9;
 	Spell->Flags = 8;
 	Spell->Comment = "Light Healing";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(2, "ex", "ura", "gran", "");
 	Spell->Mana = 40;
 	Spell->Level = 11;
 	Spell->Flags = 8;
 	Spell->Comment = "Intense Healing";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(3, "ex", "ura", "vita", "");
 	Spell->Mana = 160;
 	Spell->Level = 20;
 	Spell->Flags = 8;
 	Spell->Comment = "Ultimate Healing";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(4, "ad", "ura", "gran", "");
 	Spell->Mana = 240;
@@ -4564,6 +4604,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 1;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Intense Healing Rune";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(5, "ad", "ura", "vita", "");
 	Spell->Mana = 400;
@@ -4575,12 +4616,14 @@ static void InitSpells(void){
 	Spell->RuneLevel = 4;
 	Spell->SoulPoints = 3;
 	Spell->Comment = "Ultimate Healing Rune";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(6, "ut", "ani", "hur", "");
 	Spell->Mana = 60;
 	Spell->Level = 14;
 	Spell->Flags = 2;
 	Spell->Comment = "Haste";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(7, "ad", "ori", "");
 	Spell->Mana = 120;
@@ -4592,6 +4635,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 0;
 	Spell->SoulPoints = 1;
 	Spell->Comment = "Light Magic Missile";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(8, "ad", "ori", "gran", "");
 	Spell->Mana = 280;
@@ -4603,24 +4647,28 @@ static void InitSpells(void){
 	Spell->RuneLevel = 4;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Heavy Magic Missile";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(9, "ut", "evo", "res", "para", "");
 	Spell->Mana = 0;
 	Spell->Level = 25;
 	Spell->Flags = 1;
 	Spell->Comment = "Summon Creature";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(10, "ut", "evo", "lux", "");
 	Spell->Mana = 20;
 	Spell->Level = 8;
 	Spell->Flags = 0;
 	Spell->Comment = "Light";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(11, "ut", "evo", "gran", "lux", "");
 	Spell->Mana = 60;
 	Spell->Level = 13;
 	Spell->Flags = 0;
 	Spell->Comment = "Great Light";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(12, "ad", "eta", "sio", "");
 	Spell->Mana = 200;
@@ -4632,12 +4680,14 @@ static void InitSpells(void){
 	Spell->RuneLevel = 5;
 	Spell->SoulPoints = 3;
 	Spell->Comment = "Convince Creature";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(13, "ex", "evo", "mort", "hur", "");
 	Spell->Mana = 250;
 	Spell->Level = 38;
 	Spell->Flags = 1;
 	Spell->Comment = "Energy Wave";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(14, "ad", "evo", "ina", "");
 	Spell->Mana = 600;
@@ -4649,6 +4699,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 4;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Chameleon";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(15, "ad", "ori", "flam", "");
 	Spell->Mana = 160;
@@ -4660,6 +4711,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 2;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Fireball";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(16, "ad", "ori", "gran", "flam", "");
 	Spell->Mana = 480;
@@ -4671,6 +4723,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 4;
 	Spell->SoulPoints = 3;
 	Spell->Comment = "Great Fireball";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(17, "ad", "evo", "mas", "flam", "");
 	Spell->Mana = 600;
@@ -4682,6 +4735,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 5;
 	Spell->SoulPoints = 4;
 	Spell->Comment = "Firebomb";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(18, "ad", "evo", "mas", "hur", "");
 	Spell->Mana = 720;
@@ -4693,18 +4747,21 @@ static void InitSpells(void){
 	Spell->RuneLevel = 6;
 	Spell->SoulPoints = 4;
 	Spell->Comment = "Explosion";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(19, "ex", "evo", "flam", "hur", "");
 	Spell->Mana = 80;
 	Spell->Level = 18;
 	Spell->Flags = 9;
 	Spell->Comment = "Fire Wave";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(20, "ex", "iva", "para", "");
 	Spell->Mana = 20;
 	Spell->Level = 8;
 	Spell->Flags = 0;
 	Spell->Comment = "Find Person";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(21, "ad", "ori", "vita", "vis", "");
 	Spell->Mana = 880;
@@ -4716,24 +4773,28 @@ static void InitSpells(void){
 	Spell->RuneLevel = 15;
 	Spell->SoulPoints = 5;
 	Spell->Comment = "Sudden Death";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(22, "ex", "evo", "vis", "lux", "");
 	Spell->Mana = 100;
 	Spell->Level = 23;
 	Spell->Flags = 1;
 	Spell->Comment = "Energy Beam";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(23, "ex", "evo", "gran", "vis", "lux", "");
 	Spell->Mana = 200;
 	Spell->Level = 29;
 	Spell->Flags = 1;
 	Spell->Comment = "Great Energy Beam";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(24, "ex", "evo", "gran", "mas", "vis", "");
 	Spell->Mana = 1200;
 	Spell->Level = 60;
 	Spell->Flags = 3;
 	Spell->Comment = "Ultimate Explosion";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(25, "ad", "evo", "grav", "flam", "");
 	Spell->Mana = 240;
@@ -4745,6 +4806,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 1;
 	Spell->SoulPoints = 1;
 	Spell->Comment = "Fire Field";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(26, "ad", "evo", "grav", "pox", "");
 	Spell->Mana = 200;
@@ -4756,6 +4818,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 0;
 	Spell->SoulPoints = 1;
 	Spell->Comment = "Poison Field";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(27, "ad", "evo", "grav", "vis", "");
 	Spell->Mana = 320;
@@ -4767,6 +4830,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 3;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Energy Field";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(28, "ad", "evo", "mas", "grav", "flam", "");
 	Spell->Mana = 780;
@@ -4778,12 +4842,14 @@ static void InitSpells(void){
 	Spell->RuneLevel = 6;
 	Spell->SoulPoints = 4;
 	Spell->Comment = "Fire Wall";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(29, "ex", "ana", "pox", "");
 	Spell->Mana = 30;
 	Spell->Level = 10;
 	Spell->Flags = 0;
 	Spell->Comment = "Antidote";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(30, "ad", "ito", "grav", "");
 	Spell->Mana = 120;
@@ -4795,6 +4861,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 3;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Destroy Field";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(31, "ad", "ana", "pox", "");
 	Spell->Mana = 200;
@@ -4806,6 +4873,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 0;
 	Spell->SoulPoints = 1;
 	Spell->Comment = "Antidote Rune";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(32, "ad", "evo", "mas", "grav", "pox", "");
 	Spell->Mana = 640;
@@ -4817,6 +4885,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 5;
 	Spell->SoulPoints = 3;
 	Spell->Comment = "Poison Wall";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(33, "ad", "evo", "mas", "grav", "vis", "");
 	Spell->Mana = 1000;
@@ -4828,6 +4897,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 9;
 	Spell->SoulPoints = 5;
 	Spell->Comment = "Energy Wall";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(34, "al", "evo", "para", "para", "");
 	Spell->Mana = 0;
@@ -4852,12 +4922,14 @@ static void InitSpells(void){
 	Spell->Level = 23;
 	Spell->Flags = 0;
 	Spell->Comment = "Creature Illusion";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(39, "ut", "ani", "gran", "hur", "");
 	Spell->Mana = 100;
 	Spell->Level = 20;
 	Spell->Flags = 2;
 	Spell->Comment = "Strong Haste";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(40, "al", "evo", "cogni", "para", "");
 	Spell->Mana = 0;
@@ -4877,18 +4949,21 @@ static void InitSpells(void){
 	Spell->SoulPoints = 1;
 	Spell->Flags = 0;
 	Spell->Comment = "Food";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(44, "ut", "amo", "vita", "");
 	Spell->Mana = 50;
 	Spell->Level = 14;
 	Spell->Flags = 0;
 	Spell->Comment = "Magic Shield";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(45, "ut", "ana", "vid", "");
 	Spell->Mana = 440;
 	Spell->Level = 35;
 	Spell->Flags = 0;
 	Spell->Comment = "Invisible";
+	Spell->Vocations = SPELL_VOC_PALADIN | SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(46, "al", "evo", "cogni", "para", "para", "");
 	Spell->Mana = 0;
@@ -4908,6 +4983,7 @@ static void InitSpells(void){
 	Spell->SoulPoints = 2;
 	Spell->Flags = 0;
 	Spell->Comment = "Poisoned Arrow";
+	Spell->Vocations = SPELL_VOC_PALADIN;
 
 	Spell = CreateSpell(49, "ex", "evo", "con", "flam", "");
 	Spell->Mana = 290;
@@ -4915,6 +4991,7 @@ static void InitSpells(void){
 	Spell->SoulPoints = 3;
 	Spell->Flags = 0;
 	Spell->Comment = "Explosive Arrow";
+	Spell->Vocations = SPELL_VOC_PALADIN;
 
 	Spell = CreateSpell(50, "ad", "evo", "res", "flam", "");
 	Spell->Mana = 600;
@@ -4926,6 +5003,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 7;
 	Spell->SoulPoints = 3;
 	Spell->Comment = "Soulfire";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(51, "ex", "evo", "con", "");
 	Spell->Mana = 100;
@@ -4933,6 +5011,7 @@ static void InitSpells(void){
 	Spell->SoulPoints = 1;
 	Spell->Flags = 0;
 	Spell->Comment = "Conjure Arrow";
+	Spell->Vocations = SPELL_VOC_PALADIN;
 
 	Spell = CreateSpell(52, "al", "liber", "sio", "para", "");
 	Spell->Mana = 0;
@@ -4956,6 +5035,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 18;
 	Spell->SoulPoints = 3;
 	Spell->Comment = "Paralyze";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(55, "ad", "evo", "mas", "vis", "");
 	Spell->Mana = 880;
@@ -4967,12 +5047,14 @@ static void InitSpells(void){
 	Spell->RuneLevel = 10;
 	Spell->SoulPoints = 5;
 	Spell->Comment = "Energybomb";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(56, "ex", "evo", "gran", "mas", "pox", "");
 	Spell->Mana = 600;
 	Spell->Level = 50;
 	Spell->Flags = 3;
 	Spell->Comment = "Poison Storm";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(57, "om", "ana", "liber", "para", "para", "para", "");
 	Spell->Mana = 0;
@@ -5081,12 +5163,14 @@ static void InitSpells(void){
 	Spell->Level = 26;
 	Spell->Flags = 2;
 	Spell->Comment = "Ultimate Light";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(76, "ex", "ani", "tera", "");
 	Spell->Mana = 20;
 	Spell->Level = 9;
 	Spell->Flags = 2;
 	Spell->Comment = "Magic Rope";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(77, "ad", "evo", "res", "pox", "");
 	Spell->Mana = 400;
@@ -5098,6 +5182,7 @@ static void InitSpells(void){
 	Spell->RuneLevel = 4;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Envenom";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(78, "ad", "ito", "tera", "");
 	Spell->Mana = 200;
@@ -5109,6 +5194,7 @@ static void InitSpells(void){
 	Spell->SoulPoints = 3;
 	Spell->Flags = 3;
 	Spell->Comment = "Desintegrate";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(79, "ex", "evo", "con", "mort", "");
 	Spell->Mana = 140;
@@ -5116,24 +5202,28 @@ static void InitSpells(void){
 	Spell->SoulPoints = 2;
 	Spell->Flags = 2;
 	Spell->Comment = "Conjure Bolt";
+	Spell->Vocations = SPELL_VOC_PALADIN;
 
 	Spell = CreateSpell(80, "ex", "ori", "");
 	Spell->Mana = 0;
 	Spell->Level = 35;
 	Spell->Flags = 7;
 	Spell->Comment = "Berserk";
+	Spell->Vocations = SPELL_VOC_KNIGHT;
 
 	Spell = CreateSpell(81, "ex", "ani", "hur", "para", "");
 	Spell->Mana = 50;
 	Spell->Level = 12;
 	Spell->Flags = 2;
 	Spell->Comment = "Levitate";
+	Spell->Vocations = SPELL_VOC_ALL;
 
 	Spell = CreateSpell(82, "ex", "ura", "gran", "mas", "res", "");
 	Spell->Mana = 150;
 	Spell->Level = 36;
 	Spell->Flags = 10;
 	Spell->Comment = "Mass Healing";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(83, "ad", "ana", "mort", "");
 	Spell->Mana = 600;
@@ -5145,18 +5235,21 @@ static void InitSpells(void){
 	Spell->SoulPoints = 5;
 	Spell->Flags = 3;
 	Spell->Comment = "Animate Dead";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(84, "ex", "ura", "sio", "para", "");
 	Spell->Mana = 70;
 	Spell->Level = 18;
 	Spell->Flags = 10;
 	Spell->Comment = "Heal Friend";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(85, "ex", "ana", "mas", "mort", "");
 	Spell->Mana = 500;
 	Spell->Level = 30;
 	Spell->Flags = 3;
 	Spell->Comment = "Undead Legion";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(86, "ad", "evo", "grav", "tera", "");
 	Spell->Mana = 750;
@@ -5168,30 +5261,35 @@ static void InitSpells(void){
 	Spell->SoulPoints = 5;
 	Spell->Flags = 3;
 	Spell->Comment = "Magic Wall";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(87, "ex", "ori", "mort", "");
 	Spell->Mana = 20;
 	Spell->Level = 11;
 	Spell->Flags = 3;
 	Spell->Comment = "Force Strike";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(88, "ex", "ori", "vis", "");
 	Spell->Mana = 20;
 	Spell->Level = 12;
 	Spell->Flags = 3;
 	Spell->Comment = "Energy Strike";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(89, "ex", "ori", "flam", "");
 	Spell->Mana = 20;
 	Spell->Level = 12;
 	Spell->Flags = 3;
 	Spell->Comment = "Flame Strike";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(90, "ex", "ana", "ina", "");
 	Spell->Mana = 200;
 	Spell->Level = 26;
 	Spell->Flags = 2;
 	Spell->Comment = "Cancel Invisibility";
+	Spell->Vocations = SPELL_VOC_SORCERER | SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(91, "ad", "evo", "mas", "pox", "");
 	Spell->Mana = 520;
@@ -5203,24 +5301,28 @@ static void InitSpells(void){
 	Spell->RuneLevel = 4;
 	Spell->SoulPoints = 2;
 	Spell->Comment = "Poisonbomb";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(92, "ex", "eta", "vis", "");
 	Spell->Mana = 80;
 	Spell->Level = 41;
 	Spell->Flags = 2;
 	Spell->Comment = "Enchant Staff";
+	Spell->Vocations = SPELL_VOC_SORCERER;
 
 	Spell = CreateSpell(93, "ex", "eta", "res", "");
 	Spell->Mana = 30;
 	Spell->Level = 20;
 	Spell->Flags = 3;
 	Spell->Comment = "Challenge";
+	Spell->Vocations = SPELL_VOC_KNIGHT;
 
 	Spell = CreateSpell(94, "ex", "evo", "grav", "vita", "");
 	Spell->Mana = 220;
 	Spell->Level = 27;
 	Spell->Flags = 3;
 	Spell->Comment = "Wild Growth";
+	Spell->Vocations = SPELL_VOC_DRUID;
 
 	Spell = CreateSpell(95, "ex", "evo", "con", "vis", "");
 	Spell->Mana = 800;
@@ -5228,6 +5330,7 @@ static void InitSpells(void){
 	Spell->SoulPoints = 3;
 	Spell->Flags = 2;
 	Spell->Comment = "Power Bolt";
+	Spell->Vocations = SPELL_VOC_PALADIN;
 
 	Spell = CreateSpell(96, "al", "iva", "cogni", "para", "");
 	Spell->Mana = 0;
