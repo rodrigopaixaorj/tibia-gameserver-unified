@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tibia Data Studio - Editor Unificado</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- SIDEBAR DE NAVEGAÇÃO -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">⚔️</div>
+        <div class="brand-info">
+          <h1>Tibia Studio</h1>
+          <span class="brand-version">v1.0 • Unificado</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-objects">
+          <span class="nav-icon">📦</span>
+          <span class="nav-label">Itens (objects.srv)</span>
+          <span class="badge" id="badge-objects">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-monsters">
+          <span class="nav-icon">🐉</span>
+          <span class="nav-label">Monstros (.mon)</span>
+          <span class="badge" id="badge-monsters">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-npcs">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">NPCs (.npc)</span>
+          <span class="badge" id="badge-npcs">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-moveuse">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Ações (moveuse.dat)</span>
+          <span class="badge" id="badge-moveuse">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-sprites">
+          <span class="nav-icon">🖼️</span>
+          <span class="nav-label">Sprites (.spr / .dat)</span>
+          <span class="badge" id="badge-sprites">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-docs">
+          <span class="nav-icon">📚</span>
+          <span class="nav-label">Dicionário de Funções</span>
+        </button>
+
+        <button class="nav-item" data-tab="tab-settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Diretórios & Config</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="dot online"></span>
+          <span class="status-text" id="server-status">Servidor Ativo</span>
+        </div>
+        <div class="backup-note">🛡️ Backups automáticos ativos</div>
+      </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main-content">
+      <!-- HEADER DO TOPO -->
+      <header class="top-header">
+        <div class="header-title-group">
+          <h2 id="current-tab-title">Editor de Itens (objects.srv)</h2>
+          <p id="current-tab-subtitle">Gerenciamento completo de atributos, pesos, flags e sprites</p>
+        </div>
+
+        <div class="header-actions">
+          <div class="lang-selector-box">
+            <select id="app-language-select" class="lang-selector" title="Language / Idioma">
+              <option value="pt_BR">🇧🇷 Português</option>
+              <option value="en">🇺🇸 English</option>
+              <option value="es">🇪🇸 Español</option>
+            </select>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="global-search" placeholder="Pesquisar por ID, Nome...">
+          </div>
+          <div class="unsaved-badge" id="unsaved-changes-badge" style="display: none;" title="Você possui alterações não salvas">
+            <span class="unsaved-dot"></span>
+            <span id="lbl-unsaved-text">Edições pendentes</span>
+          </div>
+          <button class="btn btn-secondary" id="btn-reload-data">🔄 Recarregar</button>
+          <button class="btn btn-primary" id="btn-global-save">💾 Salvar Atual</button>
+        </div>
+      </header>
+
+      <!-- ÁREA DAS ABAS -->
+      <div class="tab-container">
+        
+        <!-- ==================== ABA 1: ITENS (OBJECTS.SRV) ==================== -->
+        <section class="tab-pane active" id="tab-objects">
+          <div class="editor-split">
+            <!-- Lista de Itens -->
+            <div class="panel list-panel">
+              <div class="panel-header">
+                <h3 id="lbl-objects-list-title">Lista de Itens</h3>
+                <button class="btn btn-sm btn-accent" id="btn-new-object">+ Novo Item</button>
+              </div>
+              <div class="filter-row">
+                <select id="obj-flag-filter">
+                  <option value="" id="opt-flag-all">Todas as Flags</option>
+                  <option value="Take">Take (Pegável)</option>
+                  <option value="Container">Container</option>
+                  <option value="Bank">Bank (Terreno/Parede)</option>
+                  <option value="Unmove">Unmove (Imóvel)</option>
+                  <option value="Weapon">Weapon</option>
+                  <option value="Armor">Armor</option>
+                  <option value="Shield">Shield</option>
+                  <option value="Food">Food</option>
+                  <option value="Rune">Rune</option>
+                </select>
+                <span class="item-counter" id="obj-total-counter">0 itens</span>
+              </div>
+              <div class="items-scroll-list" id="objects-list">
+                <!-- Preenchido via JS -->
+              </div>
+              <div class="pagination-bar">
+                <button class="btn-page" id="btn-prev-page">◀ Ant</button>
+                <span id="page-indicator">Página 1 / 1</span>
+                <button class="btn-page" id="btn-next-page">Próx ▶</button>
+              </div>
+            </div>
+
+            <!-- Detalhes do Item -->
+            <div class="panel details-panel">
+              <div class="panel-header">
+                <h3 id="lbl-obj-props-title">Propriedades do Item</h3>
+                <div class="header-btn-group">
+                  <button class="btn btn-sm btn-danger" id="btn-delete-object">Excluir</button>
+                  <button class="btn btn-sm btn-primary" id="btn-save-object">Salvar Item</button>
+                </div>
+              </div>
+
+              <div class="panel-body form-grid">
+                <!-- Coluna 1: Básico e Sprite Preview -->
+                <div class="form-col">
+                  <div class="sprite-preview-card">
+                    <div class="sprite-canvas-box">
+                      <img id="obj-sprite-img" src="/api/item_sprite/0?zoom=3" alt="Sprite Item">
+                    </div>
+                    <div class="sprite-controls">
+                      <span class="sprite-id-badge" id="obj-typeid-badge">TypeID: 0</span>
+                      <button class="btn btn-xs btn-outline" id="btn-open-sprite-picker">Selecionar Sprite</button>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="obj-type-id" id="lbl-obj-typeid">Type ID (ID do Objeto)*</label>
+                    <input type="number" id="obj-type-id" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="obj-name" id="lbl-obj-name">Nome do Item*</label>
+                    <input type="text" id="obj-name" placeholder="ex: sword, steel shield">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="obj-description" id="lbl-obj-desc">Descrição (Look Description)</label>
+                    <textarea id="obj-description" rows="2" placeholder="ex: An ancient blade forged with dragon fire."></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="obj-comment" id="lbl-obj-comment">Comentário Interno</label>
+                    <input type="text" id="obj-comment" placeholder="ex: Quest reward, GM item">
+                  </div>
+                </div>
+
+                <!-- Coluna 2: Atributos Numéricos Comuns -->
+                <div class="form-col">
+                  <h4 class="section-subtitle" id="lbl-numeric-attrs">Atributos Comuns</h4>
+                  
+                  <div class="input-row-2">
+                    <div class="form-group">
+                      <label for="attr-weight" id="lbl-weight">Weight (oz * 100)</label>
+                      <input type="number" id="attr-weight" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                      <label for="attr-capacity" id="lbl-capacity">Capacity (Slots)</label>
+                      <input type="number" id="attr-capacity" placeholder="0">
+                    </div>
+                  </div>
+
+                  <div class="input-row-2">
+                    <div class="form-group">
+                      <label for="attr-attack" id="lbl-attack">Attack</label>
+                      <input type="number" id="attr-attack" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                      <label for="attr-defend" id="lbl-defend">Defense</label>
+                      <input type="number" id="attr-defend" placeholder="0">
+                    </div>
+                  </div>
+
+                  <div class="input-row-2">
+                    <div class="form-group">
+                      <label for="attr-armor" id="lbl-armor">Armor Value</label>
+                      <input type="number" id="attr-armor" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                      <label for="attr-nutrition" id="lbl-nutrition">Nutrition (Food)</label>
+                      <input type="number" id="attr-nutrition" placeholder="0">
+                    </div>
+                  </div>
+
+                  <div class="input-row-2">
+                    <div class="form-group">
+                      <label for="attr-waypoints" id="lbl-waypoints">Waypoints (Ground)</label>
+                      <input type="number" id="attr-waypoints" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                      <label for="attr-totalexpire" id="lbl-totalexpire">Total Expire Time</label>
+                      <input type="number" id="attr-totalexpire" placeholder="0">
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="obj-raw-attrs" id="lbl-raw-attrs">Outros Atributos (JSON/Chave=Valor)</label>
+                    <input type="text" id="obj-raw-attrs" placeholder="RotateTarget=100, CorpseType=4025">
+                  </div>
+                </div>
+
+                <!-- Coluna 3: Flags e Checkboxes -->
+                <div class="form-col">
+                  <h4 class="section-subtitle" id="lbl-flags">Flags do Item</h4>
+                  <div class="flags-grid" id="flags-container">
+                    <!-- Gerado via JS com as flags mais usadas -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ABA 2: MONSTROS (.MON) ==================== -->
+        <section class="tab-pane" id="tab-monsters">
+          <div class="editor-split">
+            <!-- Lista de Monstros -->
+            <div class="panel list-panel">
+              <div class="panel-header">
+                <h3 id="lbl-monsters-list-title">Monstros do Servidor</h3>
+                <button class="btn btn-sm btn-accent" id="btn-new-monster">+ Novo Monstro</button>
+              </div>
+              <div class="items-scroll-list" id="monsters-list">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+
+            <!-- Detalhes do Monstro -->
+            <!-- Detalhes do Monstro -->
+            <div class="panel details-panel">
+              <div class="panel-header">
+                <h3 id="monster-title">Edição de Monstro</h3>
+                <div class="header-btn-group">
+                  <button class="btn btn-sm btn-outline" id="btn-mon-combat-guide" title="Ver como funcionam os cálculos de dano, armadura e magias">💡 Guia de Cálculos & Dano</button>
+                  <button class="btn btn-sm btn-primary" id="btn-save-monster">Salvar Monstro</button>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <!-- Barra de Resumo de Combate em Tempo Real -->
+                <div class="combat-summary-bar" id="mon-combat-summary-bar">
+                  <div class="combat-stat-pill" title="Média de dano físico por turno contra alvo sem armadura">
+                    <span class="combat-stat-lbl" id="lbl-summary-avg-melee">⚔️ Melee Médio:</span>
+                    <strong class="combat-stat-val" id="summary-avg-melee">22.5</strong>
+                  </div>
+                  <div class="combat-stat-pill" title="Absorção média de dano físico ao ser atacado">
+                    <span class="combat-stat-lbl" id="lbl-summary-avg-armor">🛡️ Absorção Armor:</span>
+                    <strong class="combat-stat-val" id="summary-avg-armor">18.8</strong>
+                  </div>
+                  <div class="combat-stat-pill" title="Percentual e HP em que o monstro para de lutar e foge">
+                    <span class="combat-stat-lbl" id="lbl-summary-flee-pct">🏃 Ponto de Fuga:</span>
+                    <strong class="combat-stat-val" id="summary-flee-pct">0% (0 HP)</strong>
+                  </div>
+                  <div class="combat-stat-pill" title="Dano máximo teórico caso o monstro acerte ataque físico + todas as magias num mesmo turno">
+                    <span class="combat-stat-lbl" id="lbl-summary-max-combo">💥 Combo Máx Teórico:</span>
+                    <strong class="combat-stat-val highlight" id="summary-max-combo">45</strong>
+                  </div>
+                </div>
+
+                <!-- Grid de atributos principais -->
+                <div class="form-grid-3">
+                  <!-- Visual e Info Básica -->
+                  <div class="form-col">
+                    <div class="sprite-preview-card">
+                      <div class="sprite-canvas-box">
+                        <img id="mon-sprite-img" src="/api/outfit_sprite/0?zoom=3" alt="Monster Outfit">
+                      </div>
+                      <div class="sprite-controls">
+                        <span class="sprite-id-badge" id="mon-race-badge">Race: 0</span>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="mon-name" id="lbl-mon-name">Nome do Monstro*</label>
+                      <input type="text" id="mon-name" placeholder="ex: Dragon, Demon" required>
+                    </div>
+
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="mon-race" id="lbl-mon-race" title="Número da raça único no servidor">RaceNumber*</label>
+                        <input type="number" id="mon-race">
+                      </div>
+                      <div class="form-group">
+                        <label for="mon-outfit" id="lbl-mon-outfit" title="LookType do monstro (ID do outfit no Tibia.dat)">Outfit LookType</label>
+                        <input type="number" id="mon-outfit">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="mon-colors" id="lbl-mon-colors" title="Paleta de cores (Head-Body-Legs-Feet de 0 a 132)">Cores (Head-Body-Legs-Feet)</label>
+                      <input type="text" id="mon-colors" placeholder="0-0-0-0">
+                    </div>
+                  </div>
+
+                  <!-- Estatísticas de Combate com Helpers -->
+                  <div class="form-col">
+                    <h4 class="section-subtitle" id="lbl-mon-combat-sec">⚔️ Combate & Atributos</h4>
+
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="mon-hp" id="lbl-mon-hp" title="Vida Total do Monstro (HitPoints). Quando chega a 0 o monstro morre.">HitPoints (Vida)*</label>
+                        <input type="number" id="mon-hp" placeholder="1000">
+                      </div>
+                      <div class="form-group">
+                        <label for="mon-exp" id="lbl-mon-exp" title="Pontos de Experiência distribuídos aos jogadores ao morrer.">Experience (XP)</label>
+                        <input type="number" id="mon-exp" placeholder="700">
+                      </div>
+                    </div>
+
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="mon-atk" id="lbl-mon-atk" title="Ataque Físico Melee Máximo. A cada turno, a engine sorteia um dano de 0 até este valor.">Attack (Dano Melee Máx)</label>
+                        <input type="number" id="mon-atk" placeholder="45">
+                      </div>
+                      <div class="form-group">
+                        <label for="mon-def" id="lbl-mon-def" title="Defesa de Escudo / Bloqueio Físico. Bloqueia o dano de até 2 atacantes por turno antes da armadura.">Defend (Escudo/Defesa)</label>
+                        <input type="number" id="mon-def" placeholder="40">
+                      </div>
+                    </div>
+
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="mon-armor" id="lbl-mon-armor" title="Armadura Corporal. Absorve entre (Armor/2) e Armor de todo dano físico restante.">Armor (Armadura)</label>
+                        <input type="number" id="mon-armor" placeholder="25">
+                      </div>
+                      <div class="form-group">
+                        <label for="mon-speed" id="lbl-mon-speed" title="Velocidade de movimento em SQMs por segundo. Ex: 45 = rápido, 25 = lento.">Speed (Velocidade)</label>
+                        <input type="number" id="mon-speed" placeholder="45">
+                      </div>
+                    </div>
+
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="mon-blood" id="lbl-mon-blood" title="Tipo de sangue que sai no chão e paredes quando o monstro toma dano físico ou de armas.">Blood (Tipo de Sangue)</label>
+                        <select id="mon-blood">
+                          <option value="Blood" id="opt-blood-red">Blood (Sangue Vermelho)</option>
+                          <option value="Slime" id="opt-blood-slime">Slime (Gosma Verde)</option>
+                          <option value="Undead" id="opt-blood-undead">Undead (Sem Sangue / Fumaça)</option>
+                          <option value="Fire" id="opt-blood-fire">Fire (Fogo / Chamas)</option>
+                          <option value="Energy" id="opt-blood-energy">Energy (Energia Azul)</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="mon-flee" id="lbl-mon-flee" title="Se a vida atual for menor ou igual a este valor, o monstro para de atacar e foge!">Flee Threshold (HP Fuga)</label>
+                        <input type="number" id="mon-flee" placeholder="0">
+                      </div>
+                    </div>
+
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="mon-corpse" id="lbl-mon-corpse" title="TypeID do item de corpo morto deixado no chão após a morte.">Corpse (ID do Corpo)</label>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                          <input type="number" id="mon-corpse" placeholder="4025">
+                          <button class="btn-builder-picker" title="Escolher Item de Corpo no objects.srv" id="btn-pick-corpse">
+                            <img id="mon-corpse-img" src="/api/item_sprite/4025?zoom=1" style="width:20px;height:20px;image-rendering:pixelated;">
+                          </button>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="mon-poison" id="lbl-mon-poison" title="Nível de Envenenamento Melee aplicado no alvo ao acertar ataques físicos corpo-a-corpo.">Poison (Veneno Melee)</label>
+                        <input type="number" id="mon-poison" placeholder="0">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Imunidades e Flags -->
+                  <div class="form-col">
+                    <h4 class="section-subtitle" id="lbl-mon-immunities-sec">🛡️ Imunidades & Comportamento</h4>
+                    <div class="flags-grid" id="mon-flags-container">
+                      <!-- Flags de monstro via JS -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tabela de Loot Interativa -->
+                <div class="loot-section" style="margin-top: 1.5rem;">
+                  <div class="section-header-row">
+                    <h4 class="section-subtitle" id="lbl-mon-loot-sec">💎 Tabela de Drop / Loot (Inventory)</h4>
+                    <button class="btn btn-sm btn-accent" id="btn-add-loot-item">+ Adicionar Item de Loot</button>
+                  </div>
+
+                  <div class="loot-table-wrapper">
+                    <table class="loot-table">
+                      <thead>
+                        <tr>
+                          <th id="th-loot-item">Item</th>
+                          <th id="th-loot-id">ID</th>
+                          <th id="th-loot-count">Qtd Máx</th>
+                          <th id="th-loot-chance">Chance (Permilagem)</th>
+                          <th id="th-loot-percent">Porcentagem</th>
+                          <th id="th-loot-action">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody id="loot-table-body">
+                        <!-- Linhas de Loot inseridas via JS -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Editor de Magias e Falas Visuais -->
+                <div class="mon-interactive-grid">
+                  
+                  <!-- Painel de Magias / Spells -->
+                  <div class="builder-block">
+                    <div class="builder-block-header">
+                      <h4 id="lbl-mon-spells-sec">✨ Magias e Ataques Mágicos (Spells)</h4>
+                      <button class="btn btn-xs btn-accent" id="btn-add-monster-spell">+ Nova Magia</button>
+                    </div>
+                    <div class="loot-table-wrapper">
+                      <table class="loot-table grid-table">
+                        <thead>
+                          <tr>
+                            <th style="width:64px;text-align:center;" id="th-spell-effect">Efeito</th>
+                            <th style="width:30%;" id="th-spell-type">Tipo / Forma</th>
+                            <th id="th-spell-details">Detalhes</th>
+                            <th style="width:88px;text-align:center;" id="th-spell-action">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody id="mon-spells-container">
+                          <!-- Linhas de magias com gráficos -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Painel de Falas / Talk -->
+                  <div class="builder-block">
+                    <div class="builder-block-header">
+                      <h4 id="lbl-mon-talk-sec">💬 Falas e Sons em Combate (Talk)</h4>
+                      <button class="btn btn-xs btn-accent" id="btn-add-monster-talk">+ Nova Fala</button>
+                    </div>
+                    <div class="loot-table-wrapper">
+                      <table class="loot-table grid-table">
+                        <thead>
+                          <tr>
+                            <th style="width:150px;" id="th-talk-mode">Modo</th>
+                            <th id="th-talk-text">Texto da fala</th>
+                            <th style="width:64px;text-align:center;" id="th-talk-action">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody id="mon-talk-container">
+                          <!-- Linhas de falas com toggle de Grito / Fala Normal -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ABA 3: NPCS (.NPC) ==================== -->
+        <section class="tab-pane" id="tab-npcs">
+          <div class="editor-split">
+            <!-- Lista de NPCs -->
+            <div class="panel list-panel">
+              <div class="panel-header">
+                <h3 id="lbl-npcs-list-title">NPCs do Servidor</h3>
+                <button class="btn btn-sm btn-accent" id="btn-new-npc">+ Novo NPC</button>
+              </div>
+              <div class="items-scroll-list" id="npcs-list">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+
+            <!-- Detalhes do NPC -->
+            <div class="panel details-panel">
+              <div class="panel-header">
+                <h3 id="npc-title">Edição de NPC</h3>
+                <div class="header-btn-group">
+                  <button class="btn btn-sm btn-primary" id="btn-save-npc">Salvar NPC</button>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <!-- Seção Superior: Dados Básicos e Paleta de Cores Tibia -->
+                <div class="npc-top-grid">
+                  <!-- Coluna 1: Visual & Info Básica -->
+                  <div class="form-col">
+                    <div class="sprite-preview-card">
+                      <div class="sprite-canvas-box">
+                        <img id="npc-sprite-img" src="/api/outfit_sprite/128?zoom=3" alt="NPC Outfit">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="npc-name" id="lbl-npc-name">Nome*</label>
+                      <input type="text" id="npc-name" required>
+                    </div>
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="npc-sex" id="lbl-npc-sex">Sexo</label>
+                        <select id="npc-sex">
+                          <option value="male" id="opt-npc-sex-male">Male</option>
+                          <option value="female" id="opt-npc-sex-female">Female</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="npc-outfit" id="lbl-npc-outfit">LookType</label>
+                        <input type="number" id="npc-outfit" value="128">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="npc-home" id="lbl-npc-home">Home Position [X, Y, Z]</label>
+                      <input type="text" id="npc-home" placeholder="[32360,32199,7]">
+                    </div>
+                    <div class="input-row-2">
+                      <div class="form-group">
+                        <label for="npc-radius" id="lbl-npc-radius">Raio (Radius)</label>
+                        <input type="number" id="npc-radius" value="4">
+                      </div>
+                      <div class="form-group">
+                        <label for="npc-colors" id="lbl-npc-colors">Cores (H-B-L-F)</label>
+                        <input type="text" id="npc-colors" placeholder="0-0-0-0">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Coluna 2: Paleta Oficial de Cores Tibia (Head, Primary, Secondary, Detail) -->
+                  <div class="form-col npc-palette-col">
+                    <h4 class="section-subtitle" id="lbl-npc-palette-sec">🎨 Paleta de Cores do Outfit (Tibia Client)</h4>
+                    <div class="tibia-palette-card" id="npc-tibia-palette">
+                      <div class="tibia-palette-header">
+                        <div class="tibia-palette-tabs">
+                          <button type="button" class="palette-tab active" data-part="head" id="tab-pal-head">Head</button>
+                          <button type="button" class="palette-tab" data-part="body" id="tab-pal-primary">Primary</button>
+                          <button type="button" class="palette-tab" data-part="legs" id="tab-pal-secondary">Secondary</button>
+                          <button type="button" class="palette-tab" data-part="feet" id="tab-pal-detail">Detail</button>
+                        </div>
+                        <div class="palette-info-badge">
+                          <span id="lbl-palette-active-part">Head</span>: <strong id="lbl-palette-color-val">#0</strong>
+                        </div>
+                      </div>
+
+                      <div class="tibia-palette-grid" id="npc-palette-swatches">
+                        <!-- 133 cores oficiais (19x7) geradas dinamicamente via JS -->
+                      </div>
+
+                      <div class="palette-quick-actions">
+                        <button type="button" class="btn btn-xs btn-outline" id="btn-npc-random-colors">🎲 Cores Aleatórias</button>
+                        <button type="button" class="btn btn-xs btn-outline" id="btn-npc-reset-colors">🔄 Reset (0-0-0-0)</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Seção Inferior: Diálogos e Comportamento Estruturado (Behaviour) -->
+                <div class="npc-behaviour-section">
+                  <div class="section-tabs-bar">
+                    <button type="button" class="sec-tab-btn active" data-sec="dialogues" id="btn-tab-npc-dialogues">💬 Diálogos & Respostas</button>
+                    <button type="button" class="sec-tab-btn" data-sec="ndb" id="btn-tab-npc-ndb">🛒 Comércio & Módulos (NDB)</button>
+                    <button type="button" class="sec-tab-btn" data-sec="raw" id="btn-tab-npc-raw">📝 Script Completo (.npc)</button>
+                  </div>
+
+                  <!-- Sub-aba 1: Diálogos & Respostas Visuais -->
+                  <div class="npc-sec-pane" id="npc-pane-dialogues">
+                    <!-- Saudações e Foco -->
+                    <div class="npc-dialogue-block">
+                      <h4 class="section-subtitle" id="lbl-npc-greetings-title">👋 Saudações, Foco & Despedida</h4>
+                      <div class="form-grid-2">
+                        <div class="form-group">
+                          <label for="npc-greet-input" id="lbl-npc-greeting">Saudação (Player diz "hi" / "hello")</label>
+                          <input type="text" id="npc-greet-input" placeholder='Oh, please come in, %N. What do you need?'>
+                        </div>
+                        <div class="form-group">
+                          <label for="npc-farewell-input" id="lbl-npc-farewell">Despedida (Player diz "bye" / "farewell")</label>
+                          <input type="text" id="npc-farewell-input" placeholder='Good bye and come again., Idle'>
+                        </div>
+                        <div class="form-group">
+                          <label for="npc-busy-input" id="lbl-npc-busy">Quando Ocupado com outro Jogador (BUSY)</label>
+                          <input type="text" id="npc-busy-input" placeholder='Sorry %N, I am already talking to a customer. Wait a minute, please., Queue'>
+                        </div>
+                        <div class="form-group">
+                          <label for="npc-vanish-input" id="lbl-npc-vanish">Jogador Anda para Longe (VANISH)</label>
+                          <input type="text" id="npc-vanish-input" placeholder='Good bye.'>
+                        </div>
+                      </div>
+                      <div class="form-group" style="margin-top: 8px;">
+                        <label for="npc-aggressive-input" id="lbl-npc-aggressive">Fala Espontânea ao Ver Jogador (Sem Trigger / Agressivo)</label>
+                        <input type="text" id="npc-aggressive-input" placeholder='Die, intruder!, Burning(25,8), EffectOpp(16), EffectMe(14), Idle'>
+                      </div>
+                    </div>
+
+                    <!-- Palavras-chave Customizadas -->
+                    <div class="npc-dialogue-block" style="margin-top: 1rem;">
+                      <div class="section-header-row">
+                        <h4 class="section-subtitle" id="lbl-npc-keywords-title">💬 Palavras-Chave & Regras de Conversa</h4>
+                        <button type="button" class="btn btn-sm btn-accent" id="btn-add-npc-keyword">+ Adicionar Regra</button>
+                      </div>
+
+                      <div class="npc-rules-table-wrapper">
+                        <table class="loot-table">
+                          <thead>
+                            <tr>
+                              <th style="width: 25%;" id="th-npc-keyword">Palavras-Chave (Keywords)</th>
+                              <th style="width: 20%;" id="th-npc-condition">Condição / Topic</th>
+                              <th style="width: 35%;" id="th-npc-response">Resposta do NPC</th>
+                              <th style="width: 15%;" id="th-npc-actions">Ações / Efeitos</th>
+                              <th style="width: 5%;"></th>
+                            </tr>
+                          </thead>
+                          <tbody id="npc-rules-tbody">
+                            <!-- Preenchido via JS -->
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sub-aba 2: Módulos NDB -->
+                  <div class="npc-sec-pane" id="npc-pane-ndb" style="display: none;">
+                    <h4 class="section-subtitle" id="lbl-npc-ndb-modules">📦 Módulos Oficiais CipSoft (.ndb)</h4>
+                    <p class="helper-text" id="lbl-npc-ndb-desc">Marque os módulos pré-fabricados de comércio para incluir automaticamente no NPC:</p>
+                    <div class="ndb-modules-grid" id="npc-ndb-checkboxes">
+                      <!-- Gerado dinamicamente via JS -->
+                    </div>
+                  </div>
+
+                  <!-- Sub-aba 3: Script Raw -->
+                  <div class="npc-sec-pane" id="npc-pane-raw" style="display: none;">
+                    <div class="form-group">
+                      <label for="npc-behaviour" id="lbl-npc-behaviour">Código Completo de Behaviour ({ ... })</label>
+                      <textarea id="npc-behaviour" rows="14" class="code-textarea" placeholder='ADDRESS,"hi$",! -> "Hello adventurer %N!"&#10;"job" -> "I am a blacksmith."'></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ABA 4: MOVEUSE.DAT ==================== -->
+        <section class="tab-pane" id="tab-moveuse">
+          <div class="editor-split">
+            <!-- Seções do MoveUse -->
+            <div class="panel list-panel">
+              <div class="panel-header">
+                <h3 id="lbl-moveuse-sec-title">Seções de Regras</h3>
+              </div>
+              <div class="items-scroll-list" id="moveuse-sections-list">
+                <!-- Seções listadas via JS -->
+              </div>
+            </div>
+
+            <!-- Regras da Seção Selecionada -->
+            <div class="panel details-panel">
+              <div class="panel-header">
+                <h3 id="moveuse-section-title">Regras da Seção</h3>
+                <div class="header-btn-group">
+                  <button class="btn btn-sm btn-accent" id="btn-add-moveuse-rule">+ Nova Regra</button>
+                  <button class="btn btn-sm btn-primary" id="btn-save-moveuse">Salvar moveuse.dat</button>
+                </div>
+              </div>
+
+              <div class="panel-body">
+                <div class="rules-container" id="moveuse-rules-list">
+                  <!-- Regras renderizadas via JS com visualizadores de item -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ABA 5: SPRITES ==================== -->
+        <section class="tab-pane" id="tab-sprites">
+          <div class="panel full-panel">
+            <div class="panel-header">
+              <h3 id="sprites-panel-title">Navegador de Sprites do Tibia.spr</h3>
+              <div class="sprite-search-controls">
+                <input type="number" id="sprite-id-search" placeholder="Ir para Sprite ID...">
+                <button class="btn btn-sm btn-secondary" id="btn-go-sprite">Buscar</button>
+                <div class="zoom-selector">
+                  <span id="lbl-zoom-text">Zoom:</span>
+                  <button class="btn-zoom active" data-zoom="1">1x</button>
+                  <button class="btn-zoom" data-zoom="2">2x</button>
+                  <button class="btn-zoom" data-zoom="4">4x</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- BARRA DE PAGINAÇÃO DE SPRITES (250 POR PÁGINA) -->
+            <div class="sprites-pagination-bar">
+              <div class="pagination-controls">
+                <button class="btn btn-sm btn-secondary" id="btn-sprites-first">⏮️ Primeira</button>
+                <button class="btn btn-sm btn-secondary" id="btn-sprites-prev">◀️ Anterior</button>
+                <button class="btn btn-sm btn-secondary" id="btn-sprites-next">Próxima ▶️</button>
+                <button class="btn btn-sm btn-secondary" id="btn-sprites-last">Última ⏭️</button>
+              </div>
+              <div class="page-jump-box">
+                <span id="lbl-page-text">Página</span>
+                <input type="number" id="sprites-page-input" class="page-jump-input" value="1" min="1">
+                <span id="sprites-page-total">de 44</span>
+                <button class="btn btn-xs btn-primary" id="btn-sprites-jump">Ir</button>
+              </div>
+              <div class="pagination-info" id="sprites-range-info">
+                Mostrando sprites 1 - 250 de 10.962
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <div class="sprites-grid" id="sprites-browser-grid">
+                <!-- Grade com 250 sprites paginados com Lazy Loading -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ABA 6: DICIONÁRIO DE FUNÇÕES CIPSOFT ==================== -->
+        <section class="tab-pane" id="tab-docs">
+          <div class="panel full-panel">
+            <div class="panel-header">
+              <div class="docs-header-left">
+                <h3 id="docs-panel-title">📚 Dicionário & Guia de Funções CipSoft (Move/Use Engine)</h3>
+                <p class="helper-text" id="docs-panel-subtitle">Catálogo completo de todos os Eventos, Condições, Ações, Alvos e Parâmetros suportados pelo servidor.</p>
+              </div>
+              <div class="docs-filter-tabs">
+                <button class="btn btn-sm btn-outline active" data-doc-filter="all" id="doc-btn-all">Todos</button>
+                <button class="btn btn-sm btn-outline" data-doc-filter="events" id="doc-btn-events">Eventos (5)</button>
+                <button class="btn btn-sm btn-outline" data-doc-filter="conditions" id="doc-btn-conds">Condições (19)</button>
+                <button class="btn btn-sm btn-outline" data-doc-filter="actions" id="doc-btn-acts">Ações / Efeitos (17)</button>
+              </div>
+            </div>
+
+            <div class="panel-body">
+              <div class="docs-search-bar">
+                <input type="text" id="docs-search-input" placeholder="Pesquisar por nome de função, palavra-chave, exemplo (ex: Change, IsType, Level, Effect, Logout)...">
+              </div>
+
+              <div class="docs-grid" id="docs-grid-container">
+                <!-- Preenchido dinamicamente via JS a partir do catálogo oficial -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== ABA 7: CONFIGURAÇÕES ==================== -->
+        <section class="tab-pane" id="tab-settings">
+          <div class="panel settings-card">
+            <div class="panel-header">
+              <h3 id="settings-panel-title">Caminhos de Diretórios & Configuração</h3>
+            </div>
+            <div class="panel-body">
+              <div class="form-group">
+                <label for="cfg-data-path" id="lbl-cfg-data-path">Diretório de Dados do Servidor (tibia-game_data)</label>
+                <input type="text" id="cfg-data-path" placeholder="d:\Games\OTServ\CipSoft Server\tibia-game_data">
+                <small class="helper-text" id="sub-cfg-data-path">Contém as pastas <code>dat/</code>, <code>mon/</code>, <code>npc/</code>.</small>
+              </div>
+
+              <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="cfg-client-path" id="lbl-cfg-client-path">Diretório do Cliente Tibia (com Tibia.spr e Tibia.dat)</label>
+                <input type="text" id="cfg-client-path" placeholder="ex: C:\Games\Tibia772 ou pasta do seu cliente">
+                <small class="helper-text" id="sub-cfg-client-path">Usado para extrair e renderizar todos os gráficos e sprites visuais.</small>
+              </div>
+
+              <div class="status-summary-box" style="margin-top: 2rem;">
+                <h4 id="lbl-cfg-status">Status do Carregamento de Arquivos:</h4>
+                <ul id="config-status-list">
+                  <!-- Atualizado via JS -->
+                </ul>
+              </div>
+
+              <button class="btn btn-primary" id="btn-save-config" style="margin-top: 1.5rem;">Salvar e Recarregar Dados</button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: CONSTRUTOR VISUAL DE REGRAS DE MOVEUSE (EVENT BUILDER) -->
+  <div class="modal-backdrop" id="rule-builder-modal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 id="builder-modal-title">⚡ Construtor de Evento & Regra CipSoft</h3>
+        <button class="btn-close-modal" id="btn-close-builder">✕</button>
+      </div>
+      <div class="modal-body builder-body">
+        
+        <!-- Linha 1: Seção e Evento Trigger -->
+        <div class="input-row-2">
+          <div class="form-group">
+            <label for="builder-section-name" id="lbl-builder-sec">Seção no moveuse.dat (ex: Beds, Doors, Keys, Fun)*</label>
+            <input type="text" id="builder-section-name" list="builder-sections-datalist" placeholder="ex: Doors, Beds, Levers, Quests">
+            <datalist id="builder-sections-datalist">
+              <!-- Preenchido dinamicamente com todas as seções existentes -->
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label for="builder-event-type" id="lbl-builder-trigger">Evento Disparador (Trigger)*</label>
+            <select id="builder-event-type">
+              <option value="Use" id="opt-trig-use">Use (Clicar em 'Use' no item - Obj1)</option>
+              <option value="MultiUse" id="opt-trig-multiuse">MultiUse ('Use With' - Usar Obj1 em Obj2)</option>
+              <option value="Movement" id="opt-trig-movement">Movement (Arrastar item ou andar)</option>
+              <option value="Collision" id="opt-trig-collision">Collision (Pisar em cima de alavanca de piso/tile)</option>
+              <option value="Separation" id="opt-trig-separation">Separation (Sair de cima do tile)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Painel de Condições -->
+        <div class="builder-block">
+          <div class="builder-block-header">
+            <h4 id="lbl-builder-conds">🔎 Condições Obrigatórias (Se acontecer isso...)</h4>
+            <div class="dropdown-container">
+              <select id="select-add-condition" class="select-inline">
+                <option value="">+ Adicionar Condição...</option>
+                <!-- Preenchido via JS com as funções de condição -->
+              </select>
+            </div>
+          </div>
+          <div class="builder-items-list" id="builder-conditions-container">
+            <!-- Chips de condições adicionadas -->
+          </div>
+        </div>
+
+        <!-- Painel de Ações / Efeitos -->
+        <div class="builder-block" style="margin-top: 1rem;">
+          <div class="builder-block-header">
+            <h4 id="lbl-builder-acts">⚡ Ações e Efeitos Resultantes (Então faça isso...)</h4>
+            <div class="dropdown-container">
+              <select id="select-add-action" class="select-inline">
+                <option value="">+ Adicionar Ação...</option>
+                <!-- Preenchido via JS com as funções de ação -->
+              </select>
+            </div>
+          </div>
+          <div class="builder-items-list" id="builder-actions-container">
+            <!-- Chips de ações adicionadas -->
+          </div>
+        </div>
+
+        <!-- Linha Gerada / Código Final -->
+        <div class="builder-code-preview" style="margin-top: 1.25rem;">
+          <label><strong id="lbl-builder-raw">Linha Formatada do moveuse.dat:</strong></label>
+          <div class="code-preview-box">
+            <code id="builder-code-output">Use, IsType (Obj1,100) -> Effect(Obj1,3)</code>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-builder">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirm-rule">Salvar Regra no moveuse.dat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SELETOR DE ITENS (LOOT / MOVEUSE) -->
+  <div class="modal-backdrop" id="item-picker-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-picker-title">Selecionar Item do objects.srv</h3>
+        <button class="btn-close-modal" id="btn-close-picker">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-search-row">
+          <input type="text" id="modal-item-search" placeholder="Filtrar por nome ou ID...">
+        </div>
+        <div class="modal-items-grid" id="modal-items-container">
+          <!-- Itens carregados para seleção -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SELETOR DE EFEITOS MÁGICOS (MAGIC EFFECTS PICKER) -->
+  <div class="modal-backdrop" id="effect-picker-modal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 id="modal-effect-picker-title">✨ Selecionar Efeito Mágico CipSoft</h3>
+        <button class="btn-close-modal" id="btn-close-effect-picker">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-search-row">
+          <input type="text" id="modal-effect-search" placeholder="Filtrar por nome ou ID do efeito...">
+        </div>
+        <div class="effects-grid" id="modal-effects-container">
+          <!-- Efeitos mágicos carregados com sprites -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONSTRUTOR DE MAGIA DE MONSTRO (MONSTER SPELL BUILDER) -->
+  <div class="modal-backdrop" id="monster-spell-modal">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 id="modal-mon-spell-title">✨ Criar / Editar Magia de Monstro</h3>
+        <button class="btn-close-modal" id="btn-close-mon-spell">✕</button>
+      </div>
+      <div class="modal-body builder-body">
+        
+        <!-- Linha 1: Tipo de Impacto e Forma/Alvo -->
+        <div class="input-row-2">
+          <div class="form-group">
+            <label for="spell-impact-type" id="lbl-spell-impact">Efeito da Magia (Impact)*</label>
+            <select id="spell-impact-type">
+              <option value="Damage" id="opt-impact-damage">Damage (Dano Elementar / Físico / Morte / Mana)</option>
+              <option value="Healing" id="opt-impact-healing">Healing (Cura de Vida / Auto-Cura)</option>
+              <option value="Speed" id="opt-impact-speed">Speed (Paralyze / Haste)</option>
+              <option value="Summon" id="opt-impact-summon">Summon (Invocar Criaturas / Lacaios)</option>
+              <option value="Field" id="opt-impact-field">Field (Criar Campo de Fogo/Veneno no Chão)</option>
+              <option value="Drunken" id="opt-impact-drunken">Drunken (Embriaguez)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="spell-shape-type" id="lbl-spell-shape">Forma de Disparo / Alvo (Shape)*</label>
+            <select id="spell-shape-type">
+              <option value="Origin" id="opt-shape-origin">Origin (Projétil em Linha Reta)</option>
+              <option value="Victim" id="opt-shape-victim">Victim (Alvo Travado na Vítima)</option>
+              <option value="Actor" id="opt-shape-actor">Actor (Em Si Mesmo / Self Buff)</option>
+              <option value="Destination" id="opt-shape-destination">Destination (Área no Chão / Bomba)</option>
+              <option value="Angle" id="opt-shape-angle">Angle (Wave / Cone Frontal)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Bloco Dinâmico: Parâmetros do Impacto -->
+        <div class="builder-block">
+          <div class="builder-block-header">
+            <h4 id="lbl-spell-params-title">🎯 Parâmetros de Dano e Efeito</h4>
+          </div>
+          
+          <!-- Seção Damage -->
+          <div id="spell-damage-fields" class="input-row-3">
+            <div class="form-group">
+              <label for="spell-damage-type" id="lbl-spell-dmg-type">Elemento / Tipo de Dano</label>
+              <select id="spell-damage-type">
+                <option value="4" id="opt-dmg-fire">Fire (4 - Fogo / Chamas)</option>
+                <option value="16" id="opt-dmg-energy">Energy (16 - Energia / Raios)</option>
+                <option value="8" id="opt-dmg-poison">Poison (8 - Veneno / Terra)</option>
+                <option value="32" id="opt-dmg-death">Death / LifeDrain (32 - Morte / SD)</option>
+                <option value="1" id="opt-dmg-physical">Physical (1 - Físico / Impacto)</option>
+                <option value="64" id="opt-dmg-manadrain">ManaDrain (64 - Dreno de Mana)</option>
+                <option value="128" id="opt-dmg-holy">Holy (128 - Luz Sagrada)</option>
+                <option value="256" id="opt-dmg-drown">Drown (256 - Afogamento)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="spell-damage-min" id="lbl-spell-dmg-min">Dano Mínimo</label>
+              <input type="number" id="spell-damage-min" value="50" min="0">
+            </div>
+            <div class="form-group">
+              <label for="spell-damage-max" id="lbl-spell-dmg-max">Dano Máximo</label>
+              <input type="number" id="spell-damage-max" value="450" min="1">
+            </div>
+          </div>
+
+          <!-- Seção Healing -->
+          <div id="spell-healing-fields" class="input-row-2" style="display:none;">
+            <div class="form-group">
+              <label for="spell-heal-min" id="lbl-spell-heal-min">Cura Mínima</label>
+              <input type="number" id="spell-heal-min" value="50" min="1">
+            </div>
+            <div class="form-group">
+              <label for="spell-heal-max" id="lbl-spell-heal-max">Cura Máxima</label>
+              <input type="number" id="spell-heal-max" value="150" min="1">
+            </div>
+          </div>
+
+          <!-- Seção Speed (Paralyze / Haste) -->
+          <div id="spell-speed-fields" class="input-row-3" style="display:none;">
+            <div class="form-group">
+              <label for="spell-speed-val" id="lbl-spell-speed-val">Alteração de Speed (ex: -50 ou +60)</label>
+              <input type="number" id="spell-speed-val" value="-50">
+            </div>
+            <div class="form-group">
+              <label for="spell-speed-dur" id="lbl-spell-speed-dur">Duração (Segundos)</label>
+              <input type="number" id="spell-speed-dur" value="10" min="1">
+            </div>
+            <div class="form-group">
+              <label for="spell-speed-eff" id="lbl-spell-speed-eff">Efeito de Speed (ID)</label>
+              <input type="number" id="spell-speed-eff" value="25">
+            </div>
+          </div>
+
+          <!-- Seção Summon -->
+          <div id="spell-summon-fields" class="input-row-2" style="display:none;">
+            <div class="form-group">
+              <label for="spell-summon-race" id="lbl-spell-summon-race">RaceNumber do Monstro Invocado</label>
+              <input type="number" id="spell-summon-race" value="82">
+            </div>
+            <div class="form-group">
+              <label for="spell-summon-count" id="lbl-spell-summon-count">Quantidade Máxima Invocada</label>
+              <input type="number" id="spell-summon-count" value="3" min="1" max="6">
+            </div>
+          </div>
+
+          <!-- Seção Field -->
+          <div id="spell-field-fields" class="input-row-2" style="display:none;">
+            <div class="form-group">
+              <label for="spell-field-item" id="lbl-spell-field-item">Item ID do Campo (ex: 1487 = Fire Field)</label>
+              <input type="number" id="spell-field-item" value="1487">
+            </div>
+          </div>
+
+          <!-- Seção Drunken -->
+          <div id="spell-drunken-fields" class="input-row-3" style="display:none;">
+            <div class="form-group">
+              <label for="spell-drunk-intensity" id="lbl-spell-drunk-int">Intensidade (1 a 100)</label>
+              <input type="number" id="spell-drunk-intensity" value="50">
+            </div>
+            <div class="form-group">
+              <label for="spell-drunk-duration" id="lbl-spell-drunk-dur">Duração (Segundos)</label>
+              <input type="number" id="spell-drunk-duration" value="15">
+            </div>
+            <div class="form-group">
+              <label for="spell-drunk-effect" id="lbl-spell-drunk-eff">Efeito (ID)</label>
+              <input type="number" id="spell-drunk-effect" value="11">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bloco de Visual / Gráficos / Turnos -->
+        <div class="builder-block" style="margin-top: 1rem;">
+          <div class="builder-block-header">
+            <h4 id="lbl-spell-visual-title">🔮 Visual do Efeito, Projétil & Frequência</h4>
+          </div>
+          <div class="input-row-3">
+            <div class="form-group">
+              <label for="spell-magic-effect" id="lbl-spell-magic-effect">Efeito Mágico no Impacto</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="number" id="spell-magic-effect" value="21" style="width:70px;">
+                <button class="btn-builder-picker" id="btn-pick-spell-effect" title="Escolher Efeito Mágico">
+                  <img id="spell-effect-preview-img" src="/api/effect_sprite/21?zoom=1" style="width:20px;height:20px;image-rendering:pixelated;">
+                  <span id="lbl-pick-spell-effect-btn">✨ Escolher</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="spell-missile-effect" id="lbl-spell-missile-effect">Projétil / Míssil (Distance)</label>
+              <select id="spell-missile-effect">
+                <option value="0" id="opt-mis-0">0 - Sem Projétil</option>
+                <option value="1" id="opt-mis-1">1 - Spear</option>
+                <option value="2" id="opt-mis-2">2 - Bolt</option>
+                <option value="3" id="opt-mis-3">3 - Arrow</option>
+                <option value="4" id="opt-mis-4">4 - Fire (Fogo)</option>
+                <option value="5" id="opt-mis-5">5 - Energy (Energia)</option>
+                <option value="6" id="opt-mis-6">6 - Poison (Veneno)</option>
+                <option value="7" id="opt-mis-7">7 - Sudden Death (Morte)</option>
+                <option value="8" id="opt-mis-8">8 - Large Rock (Pedra)</option>
+                <option value="9" id="opt-mis-9">9 - Small Stone</option>
+                <option value="10" id="opt-mis-10">10 - Death</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="spell-delay" id="lbl-spell-delay" title="Intervalo entre ataques em turnos (ex: 2 = frequente / 50%, 6 = moderado / 16%)">Turnos / Frequência (Delay)*</label>
+              <input type="number" id="spell-delay" value="6" min="1" max="30">
+            </div>
+          </div>
+        </div>
+
+        <!-- Linha Formatada do Arquivo .mon -->
+        <div class="builder-code-preview" style="margin-top: 1.25rem;">
+          <label><strong id="lbl-mon-spell-code-title">Linha Formatada do .mon:</strong></label>
+          <div class="code-preview-box">
+            <code id="mon-spell-code-output">Origin (4, 21) -> Damage (4, 450, 50) : 6</code>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-mon-spell">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirm-mon-spell">Salvar Magia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: GUIA DE CÁLCULOS DE DANO & COMBATE DE MONSTROS -->
+  <div class="modal-backdrop" id="monster-combat-guide-modal">
+    <div class="modal-dialog modal-dialog-lg" style="max-width: 860px;">
+      <div class="modal-header">
+        <h3 id="combat-guide-title">💡 Guia de Combate, Cálculos de Dano & Fórmulas (CipSoft 7.72)</h3>
+        <button class="btn-close-modal" id="btn-close-combat-guide">✕</button>
+      </div>
+      <div class="modal-body" id="combat-guide-body" style="max-height: 75vh; overflow-y: auto; padding-right: 12px;">
+        
+        <!-- Grid de Cards de Fórmulas -->
+        <div class="combat-guide-grid" id="combat-guide-grid">
+          
+          <!-- Card 1: Ataque Melee e Fórmulas -->
+          <div class="guide-topic-card" id="guide-card-1">
+            <h4>⚔️ 1. Ataque Melee & Dano Físico</h4>
+            <p>A cada rodada de combate (<strong>~2 segundos</strong>), o monstro executa um ataque físico contra seu alvo:</p>
+            <div class="formula-box">
+              <code>Dano_Bruto = random(0, Attack)</code>
+            </div>
+            <p>Em seguida, o valor de <strong>Defesa (Defend)</strong> do alvo tenta bloquear o golpe:</p>
+            <div class="formula-box">
+              <code>Dano_Apos_Escudo = max(0, Dano_Bruto - Defesa_Alvo)</code>
+            </div>
+            <p>Se <code>Dano_Apos_Escudo > 0</code>, a <strong>Armadura (Armor)</strong> do alvo absorve parte do impacto:</p>
+            <div class="formula-box">
+              <code>Absorcao_Armor = (Armor / 2) + random(0, Armor / 2)</code><br>
+              <code>Dano_Final = max(0, Dano_Apos_Escudo - Absorcao_Armor)</code>
+            </div>
+          </div>
+
+          <!-- Card 2: Armadura e Escudo do Monstro -->
+          <div class="guide-topic-card" id="guide-card-2">
+            <h4>🛡️ 2. Defesa & Resistência do Monstro</h4>
+            <ul>
+              <li><strong>Defend:</strong> Age como escudo. Bloqueia o dano físico de até 2 atacantes por rodada.</li>
+              <li><strong>Armor:</strong> Absorve dano residual. Em média absorve <strong>75%</strong> do valor de Armor em cada golpe físico recebido.</li>
+              <li><strong>Poison:</strong> Se <code>Poison > 0</code>, ao acertar um ataque físico o monstro aplica veneno periódico de <code>Poison/2</code> a <code>Poison</code> por segundo.</li>
+              <li><strong>Blood:</strong> Tipo de sangue emitido (Blood = Vermelho, Slime = Verde, Undead = Fumaça, Fire = Fogo, Energy = Azul).</li>
+            </ul>
+          </div>
+
+          <!-- Card 3: Magias e Spells -->
+          <div class="guide-topic-card" id="guide-card-3">
+            <h4>✨ 3. Magias e Ataques à Distância (Spells)</h4>
+            <p>As magias no formato <code>Shape -> Impact : Delay</code> são processadas a cada turno:</p>
+            <ul>
+              <li><strong>Shape:</strong> Como a magia é disparada:
+                <br>• <code>Origin(Missile, Effect)</code>: Projétil em linha reta.
+                <br>• <code>Victim(Missile, Range, Effect)</code>: Teleguiado até o alvo.
+                <br>• <code>Actor(Effect)</code>: Centrado no monstro (Self Buff / Cura).
+                <br>• <code>Destination(...)</code>: Área / Bomba no chão.
+                <br>• <code>Angle(...)</code>: Cone / Wave frontal (ex: Dragon Wave).
+              </li>
+              <li><strong>Impact:</strong> O efeito causado (<code>Damage(Tipo, Max, Min)</code>, <code>Healing</code>, <code>Speed/Paralyze</code>, <code>Summon</code>, <code>Field</code>).</li>
+              <li><strong>Delay (Turnos):</strong> Frequência da magia. <code>: 2</code> = 50% de chance/turno (~1 a cada 4s), <code>: 6</code> = ~16% de chance/turno (~1 a cada 12s).</li>
+            </ul>
+          </div>
+
+          <!-- Card 4: Falas e Grito -->
+          <div class="guide-topic-card" id="guide-card-4">
+            <h4>💬 4. Falas do Monstro (Talk) & Gritos</h4>
+            <ul>
+              <li><strong>Fala Comum (Say):</strong> Aparece em amarelo sobre a criatura no alcance normal de visão.</li>
+              <li><strong>Grito (#Y):</strong> Começa com <code>#Y </code>. Aparece em <strong>vermelho</strong> para todos os jogadores na tela inteira (ex: <code>#Y GROOAAARRR!</code>).</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- SIMULADOR INTERATIVO DE DANO -->
+        <div class="sim-tester-box" style="margin-top: 1.5rem;">
+          <h4 style="margin-bottom: 0.75rem; display:flex; align-items:center; gap: 8px;">
+            <span id="sim-title-text">🎯 Simulador Rápido de Dano Melee</span>
+            <span class="badge badge-formula" id="sim-badge-text">Baseado no C++</span>
+          </h4>
+          <div class="input-row-3">
+            <div class="form-group">
+              <label id="lbl-sim-mon-atk">Ataque do Monstro (Attack):</label>
+              <input type="number" id="sim-mon-atk" value="50" min="0">
+            </div>
+            <div class="form-group">
+              <label id="lbl-sim-target-def">Defesa do Alvo (Defend):</label>
+              <input type="number" id="sim-target-def" value="30" min="0">
+            </div>
+            <div class="form-group">
+              <label id="lbl-sim-target-armor">Armadura do Alvo (Armor):</label>
+              <input type="number" id="sim-target-armor" value="20" min="0">
+            </div>
+          </div>
+          <button class="btn btn-sm btn-primary" id="btn-run-damage-sim" style="margin-top: 0.5rem;">🎲 Simular 100 Ataques</button>
+
+          <div class="sim-results-panel" id="sim-results-output" style="margin-top: 1rem; display: none;">
+            <div class="sim-metrics-grid">
+              <div class="metric-box">
+                <span class="m-lbl" id="sim-lbl-avg">Dano Médio / Turno</span>
+                <span class="m-val" id="sim-avg-dmg">0</span>
+              </div>
+              <div class="metric-box">
+                <span class="m-lbl" id="sim-lbl-max">Dano Máximo Causado</span>
+                <span class="m-val" id="sim-max-dmg">0</span>
+              </div>
+              <div class="metric-box">
+                <span class="m-lbl" id="sim-lbl-block">Taxa de Bloqueio (Poff)</span>
+                <span class="m-val" id="sim-block-rate">0%</span>
+              </div>
+              <div class="metric-box">
+                <span class="m-lbl" id="sim-lbl-hits">Golpes com Dano</span>
+                <span class="m-val" id="sim-hit-rate">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-close-combat-guide-footer">Fechar Guia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRMAÇÃO DE ALTERAÇÕES NÃO SALVAS (DIRTY STATE) -->
+  <div class="modal-backdrop" id="unsaved-changes-modal">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="lbl-modal-unsaved-title">⚠️ Alterações Não Salvas</h3>
+        <button class="btn-close-modal" id="btn-close-unsaved-modal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem 0;">
+        <p id="lbl-modal-unsaved-msg" style="color: var(--text-secondary); line-height: 1.5; font-size: 0.95rem;">
+          Você possui edições pendentes que ainda não foram salvas. Deseja salvar as alterações agora antes de continuar ou descartá-las?
+        </p>
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+        <button class="btn btn-secondary" id="btn-unsaved-cancel">Cancelar</button>
+        <button class="btn btn-danger" id="btn-unsaved-discard">🗑️ Descartar</button>
+        <button class="btn btn-primary" id="btn-unsaved-save">💾 Salvar e Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
