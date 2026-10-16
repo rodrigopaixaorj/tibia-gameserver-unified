@@ -158,6 +158,14 @@ char WorldAddress[64];
 char MotdText[256];
 bool FreePremium;
 
+// Status Server & OTServList Configuration
+char ServerName[64];
+char OwnerName[64];
+char OwnerEmail[64];
+char ServerURL[128];
+char ServerLocation[64];
+int  StatusTimeout;
+
 static char PasswordKey[9] = "Pm-,o%yD";
 
 static void DisguisePassword(char *Password, char *Key){
@@ -277,6 +285,13 @@ void ReadConfig(void){
 	strncpy(MotdText, "Welcome to Tibia 7.72!", sizeof(MotdText) - 1);
 	FreePremium = false;
 
+	strncpy(ServerName, "Tibia 7.72 Classic", sizeof(ServerName) - 1);
+	strncpy(OwnerName, "Admin", sizeof(OwnerName) - 1);
+	strncpy(OwnerEmail, "admin@tibia.local", sizeof(OwnerEmail) - 1);
+	strncpy(ServerURL, "https://otservlist.org", sizeof(ServerURL) - 1);
+	strncpy(ServerLocation, "Brazil", sizeof(ServerLocation) - 1);
+	StatusTimeout = 5000;
+
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
 		".tibia",
@@ -345,6 +360,44 @@ void ReadConfig(void){
 			Script.readNumber();
 		}else if(strcmp(Identifier, "connectiontimeout") == 0 || strcmp(Identifier, "connection_timeout") == 0){
 			Script.readNumber();
+		}else if(strcmp(Identifier, "servername") == 0 || strcmp(Identifier, "server_name") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(ServerName, val, sizeof(ServerName) - 1);
+				ServerName[sizeof(ServerName) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "ownername") == 0 || strcmp(Identifier, "owner_name") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(OwnerName, val, sizeof(OwnerName) - 1);
+				OwnerName[sizeof(OwnerName) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "owneremail") == 0 || strcmp(Identifier, "owner_email") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(OwnerEmail, val, sizeof(OwnerEmail) - 1);
+				OwnerEmail[sizeof(OwnerEmail) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "serverurl") == 0 || strcmp(Identifier, "server_url") == 0 || strcmp(Identifier, "url") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(ServerURL, val, sizeof(ServerURL) - 1);
+				ServerURL[sizeof(ServerURL) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "serverlocation") == 0 || strcmp(Identifier, "server_location") == 0 || strcmp(Identifier, "location") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(ServerLocation, val, sizeof(ServerLocation) - 1);
+				ServerLocation[sizeof(ServerLocation) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "statustimeout") == 0 || strcmp(Identifier, "status_timeout") == 0){
+			StatusTimeout = Script.readNumber();
+		}else if(strcmp(Identifier, "motd") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(MotdText, val, sizeof(MotdText) - 1);
+				MotdText[sizeof(MotdText) - 1] = 0;
+			}
 		}else if(strcmp(Identifier, "db_type") == 0 || strcmp(Identifier, "dbtype") == 0 || strcmp(Identifier, "sql_type") == 0){
 			const char *val = Script.readString();
 			if(val){

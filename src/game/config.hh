@@ -130,6 +130,14 @@ extern char WorldAddress[64];
 extern char MotdText[256];
 extern bool FreePremium;
 
+// Status Server & OTServList Configuration
+extern char ServerName[64];
+extern char OwnerName[64];
+extern char OwnerEmail[64];
+extern char ServerURL[128];
+extern char ServerLocation[64];
+extern int  StatusTimeout;
+
 void ReadConfig(void);
 
 #endif //TIBIA_CONFIG_HH_
