@@ -137,6 +137,7 @@ extern char OwnerEmail[64];
 extern char ServerURL[128];
 extern char ServerLocation[64];
 extern int  StatusTimeout;
+extern char LoadedConfigFile[4096];
 
 void ReadConfig(void);
 

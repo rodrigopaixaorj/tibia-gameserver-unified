@@ -165,6 +165,7 @@ char OwnerEmail[64];
 char ServerURL[128];
 char ServerLocation[64];
 int  StatusTimeout;
+char LoadedConfigFile[4096] = {0};
 
 static char PasswordKey[9] = "Pm-,o%yD";
 
@@ -292,17 +293,22 @@ void ReadConfig(void){
 	strncpy(ServerLocation, "Brazil", sizeof(ServerLocation) - 1);
 	StatusTimeout = 5000;
 
+	LoadedConfigFile[0] = 0;
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
+		"config.cfg",
+		"../config.cfg",
 		".tibia",
 		"../tibia-game_data/.tibia",
 		"tibia-game_data/.tibia",
-		"../../tibia-game_data/.tibia",
-		"config.cfg"
+		"../../tibia-game_data/.tibia"
 	};
 	for(const char *cand : configCandidates){
 		if(FileExists(cand)){
-			strncpy(FileName, cand, sizeof(FileName));
+			strncpy(FileName, cand, sizeof(FileName) - 1);
+			FileName[sizeof(FileName) - 1] = 0;
+			strncpy(LoadedConfigFile, FileName, sizeof(LoadedConfigFile) - 1);
+			LoadedConfigFile[sizeof(LoadedConfigFile) - 1] = 0;
 			break;
 		}
 	}

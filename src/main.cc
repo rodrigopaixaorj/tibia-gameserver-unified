@@ -74,7 +74,11 @@ int main(int argc, char **argv){
 	// 3. Load server configuration
 	std::cout << ":: Loading server configuration... " << std::flush;
 	ReadConfig();
-	std::cout << "[done]\n";
+	if(LoadedConfigFile[0] != 0){
+		std::cout << "[" << LoadedConfigFile << "] [done]\n";
+	}else{
+		std::cout << "[using defaults] [done]\n";
+	}
 
 	// 4. Initialize database engine (SQLite or MySQL/MariaDB based on config)
 	std::cout << ":: Checking Database Connection... " << std::flush;

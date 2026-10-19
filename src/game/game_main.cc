@@ -47,7 +47,11 @@ void InitAll(void){
 	try{
 		std::cout << ":: Loading config... " << std::flush;
 		ReadConfig();
-		std::cout << "[done]\n";
+		if(LoadedConfigFile[0] != 0){
+			std::cout << "[" << LoadedConfigFile << "] [done]\n";
+		}else{
+			std::cout << "[done]\n";
+		}
 
 		std::cout << ":: Loading world config... " << std::flush;
 		LoadWorldConfig();
