@@ -379,6 +379,7 @@ The included database comes with pre-configured accounts (Password: `tibia`) pop
 
 ## Credits & Acknowledgements
 
+* **Nottinghster** ([OtLand Profile](https://otland.net/members/nottinghster.3619/)) – Main author and lead developer responsible for the standalone porting, modernization, cross-platform architecture, and making this project publicly accessible to the OTServ community.
 * **Toor** – For publicly releasing the virgin CipSoft 7.7 server tarball ([OtLand Thread](https://otland.net/threads/7-7-realots-7-7-cipsoft-files-virgin.244562/)).
 * **Fusion32** – For the monumental reverse engineering and C++ decompilation project ([OtLand Thread](https://otland.net/threads/tibia-7-7-server-decompiled.296811/)).
 * **CipSoft GmbH** – Creators of Tibia.
