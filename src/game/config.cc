@@ -3,41 +3,121 @@
 #include <filesystem>
 #include <cstring>
 
-static void NormalizeDataPath(char *Path, const char *SubDir){
+static void CleanPathString(char *Path){
+	size_t len = strlen(Path);
+	while(len > 1 && (Path[len - 1] == '/' || Path[len - 1] == '\\')){
+		Path[len - 1] = 0;
+		len--;
+	}
+}
+
+static void ResolveGameDataPaths(void){
 	namespace fs = std::filesystem;
-	if(Path[0] != 0){
-		fs::path direct(Path);
-		if(fs::exists(direct) && fs::is_directory(direct)){
-			return;
-		}
-		fs::path sub = direct / SubDir;
-		if(fs::exists(sub) && fs::is_directory(sub)){
-			std::string s = sub.string();
-			strncpy(Path, s.c_str(), 4096);
-			return;
+
+	// 1. Determine root data directory (TFS style data directory)
+	fs::path rootPath;
+	if(DATAPATH[0] != 0){
+		CleanPathString(DATAPATH);
+		fs::path userDir(DATAPATH);
+		// If user pointed to '.../dat', use the parent as data root
+		if(userDir.filename() == "dat" && userDir.has_parent_path()){
+			rootPath = userDir.parent_path();
+		}else{
+			rootPath = userDir;
 		}
 	}
-	const char *candidates[] = {
-		"../CipSoft Server/tibia-game_data",
-		"../../CipSoft Server/tibia-game_data",
-		"../tibia-game_data",
-		"tibia-game_data",
-		"../../tibia-game_data",
-		"../data",
-		"data",
-		"."
-	};
-	for(const char *cand : candidates){
-		fs::path p;
-		if(strcmp(cand, ".") == 0){
-			p = fs::path(SubDir);
-		}else{
-			p = fs::path(cand) / SubDir;
+
+	// If no data_path specified or folder does not exist, look for known default candidates
+	if(rootPath.empty() || !fs::exists(rootPath)){
+		const char *candidates[] = {
+			"../CipSoft Server/tibia-game_data",
+			"../../CipSoft Server/tibia-game_data",
+			"../tibia-game_data",
+			"tibia-game_data",
+			"../../tibia-game_data",
+			"../data",
+			"data",
+			"."
+		};
+		for(const char *cand : candidates){
+			fs::path p(cand);
+			if(fs::exists(p) && fs::is_directory(p)){
+				if(fs::exists(p / "dat") || fs::exists(p / "map") || fs::exists(p / "objects.srv")){
+					rootPath = p;
+					break;
+				}
+			}
 		}
-		if(fs::exists(p) && fs::is_directory(p)){
-			std::string s = p.string();
-			strncpy(Path, s.c_str(), 4096);
-			return;
+	}
+
+	// Helper to resolve an individual subfolder from rootPath (unless user explicitly overrode it)
+	auto resolveSub = [&](char *target, const char *subName, bool allowCreate = false){
+		if(target[0] != 0){
+			CleanPathString(target);
+			fs::path direct(target);
+			if(fs::exists(direct) && fs::is_directory(direct)){
+				std::string s = direct.generic_string();
+				strncpy(target, s.c_str(), 4095);
+				target[4095] = 0;
+				return;
+			}
+		}
+
+		if(!rootPath.empty()){
+			fs::path sub = rootPath / subName;
+			if(fs::exists(sub) && fs::is_directory(sub)){
+				std::string s = sub.generic_string();
+				strncpy(target, s.c_str(), 4095);
+				target[4095] = 0;
+				return;
+			}
+			if(allowCreate){
+				std::error_code ec;
+				fs::create_directories(sub, ec);
+				if(fs::exists(sub, ec)){
+					std::string s = sub.generic_string();
+					strncpy(target, s.c_str(), 4095);
+					target[4095] = 0;
+					return;
+				}
+			}
+		}
+
+		if(!rootPath.empty()){
+			std::string s = rootPath.generic_string();
+			strncpy(target, s.c_str(), 4095);
+			target[4095] = 0;
+		}
+	};
+
+	// Resolve DATAPATH (prefer dat/ subfolder, fallback to rootPath)
+	if(DATAPATH[0] != 0 && (fs::path(DATAPATH).filename() == "dat" && fs::exists(DATAPATH))){
+		CleanPathString(DATAPATH);
+	}else if(!rootPath.empty() && fs::exists(rootPath / "dat") && fs::is_directory(rootPath / "dat")){
+		std::string s = (rootPath / "dat").generic_string();
+		strncpy(DATAPATH, s.c_str(), 4095);
+		DATAPATH[4095] = 0;
+	}else if(!rootPath.empty()){
+		std::string s = rootPath.generic_string();
+		strncpy(DATAPATH, s.c_str(), 4095);
+		DATAPATH[4095] = 0;
+	}
+
+	// Automatically resolve all other subdirectories from data root (TFS style)
+	resolveSub(MAPPATH, "map");
+	resolveSub(MONSTERPATH, "mon");
+	resolveSub(NPCPATH, "npc");
+	resolveSub(USERPATH, "usr");
+	resolveSub(SAVEPATH, "save", true);
+	resolveSub(LOGPATH, "log", true);
+	resolveSub(BINPATH, "bin");
+
+	if(ORIGMAPPATH[0] == 0){
+		if(!rootPath.empty() && fs::exists(rootPath / "origmap")){
+			resolveSub(ORIGMAPPATH, "origmap");
+		}else{
+			strncpy(ORIGMAPPATH, MAPPATH, 4095);
+			ORIGMAPPATH[4095] = 0;
 		}
 	}
 }
@@ -334,7 +414,9 @@ void ReadConfig(void){
 			strncpy(MAPPATH, Script.readString(), sizeof(MAPPATH) - 1);
 		}else if(strcmp(Identifier, "origmappath") == 0 || strcmp(Identifier, "orig_map_path") == 0){
 			strncpy(ORIGMAPPATH, Script.readString(), sizeof(ORIGMAPPATH) - 1);
-		}else if(strcmp(Identifier, "datapath") == 0 || strcmp(Identifier, "data_path") == 0){
+		}else if(strcmp(Identifier, "datapath") == 0 || strcmp(Identifier, "data_path") == 0
+		      || strcmp(Identifier, "datadirectory") == 0 || strcmp(Identifier, "data_directory") == 0
+		      || strcmp(Identifier, "datadir") == 0 || strcmp(Identifier, "data_dir") == 0){
 			strncpy(DATAPATH, Script.readString(), sizeof(DATAPATH) - 1);
 		}else if(strcmp(Identifier, "monsterpath") == 0 || strcmp(Identifier, "monster_path") == 0){
 			strncpy(MONSTERPATH, Script.readString(), sizeof(MONSTERPATH) - 1);
@@ -708,15 +790,8 @@ void ReadConfig(void){
 		}
 	}
 
-	NormalizeDataPath(BINPATH, "bin");
-	NormalizeDataPath(MAPPATH, "map");
-	NormalizeDataPath(ORIGMAPPATH, "origmap");
-	NormalizeDataPath(DATAPATH, "dat");
-	NormalizeDataPath(MONSTERPATH, "mon");
-	NormalizeDataPath(NPCPATH, "npc");
-	NormalizeDataPath(USERPATH, "usr");
-	NormalizeDataPath(LOGPATH, "log");
-	NormalizeDataPath(SAVEPATH, "save");
+	// Resolve all game data directories from root data directory (TFS style)
+	ResolveGameDataPaths();
 
 	if(GamePort == 0){
 		GamePort = 7172;

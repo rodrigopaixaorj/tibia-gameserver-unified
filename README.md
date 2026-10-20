@@ -160,9 +160,8 @@ The server binary requires the official virgin CipSoft 7.7 data files (`dat/`, `
    bind_address = "0.0.0.0"
    world_address = "127.0.0.1"
    world_name = "Zanera"
-   data_path = "../tibia-game_data/dat"
-   map_path = "../tibia-game_data/map"
-   save_path = "../tibia-game_data/save"
+   # Game Data Directory (TFS style: auto-detects dat, map, mon, npc, usr, save, log)
+   data_path = "../tibia-game_data"
 
    # Database Selection: "sqlite", "mysql", or "postgres"
    db_type = "sqlite"
@@ -238,10 +237,13 @@ The server is configured via `config.cfg` in the root directory. All parameters 
 | `max_players` | `1000` | Maximum simultaneous players allowed online. |
 | `max_connections` | `1100` | Maximum socket connections. |
 | `connection_timeout`| `30` | Socket timeout in seconds. |
-| `data_path` | `"../tibia-game_data/dat"` | Path to CipSoft `.dat` files directory. |
-| `map_path` | `"../tibia-game_data/map"` | Path to CipSoft `.sec` and `.map` sector files directory. |
-| `save_path` | `"../tibia-game_data/save"` | Path to game state save directory. |
-| `log_path` | `"../tibia-game_data/log"` | Path to server logs directory. |
+| `data_path` | `"../tibia-game_data"` | Root data directory (TFS style). Automatically loads `dat`, `map`, `mon`, `npc`, `usr`, `save`, `log`. |
+| `map_path` | _(optional)_ | Custom path to map sectors directory if stored outside data_path. |
+| `monster_path` | _(optional)_ | Custom path to monsters directory if stored outside data_path. |
+| `npc_path` | _(optional)_ | Custom path to NPCs directory if stored outside data_path. |
+| `user_path` | _(optional)_ | Custom path to legacy character `.usr` files if stored outside data_path. |
+| `save_path` | _(optional)_ | Custom path to game state save directory. Auto-created if omitted. |
+| `log_path` | _(optional)_ | Custom path to server logs directory. Auto-created if omitted. |
 | `rsa_key_file` | `"tibia.pem"` | 1024-bit RSA private key file for login decryption. |
 | `motd` | `"Welcome to Tibia!"` | Message of the day shown upon character login. |
 
