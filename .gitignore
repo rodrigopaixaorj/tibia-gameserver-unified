@@ -85,6 +85,7 @@ $RECYCLE.BIN/
 .DS_Store
 *.code-workspace
 *.png
+*.exe
 
 # Editor backups
 *~

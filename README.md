@@ -108,10 +108,20 @@ tibia-server/
 
 ---
 
-## Building the Server
+## Quick Start & Releases
+
+### Pre-compiled Packages (Recommended for Players & Server Hosts)
+If you do not want to compile the source code yourself, download the latest official pre-compiled package from GitHub Releases:
+* **[Download Latest Release (ZIP)](https://github.com/rodrigopaixaorj/tibia-gameserver-unified/releases)**
+
+Each release package contains the ready-to-run `tibia-server.exe`, runtime DLLs (`mpir.dll`, `libmariadb.dll`, `z.dll`), `config.cfg`, RSA key `tibia.pem`, and `tibia.db`.
+
+---
+
+## Building from Source
 
 ### Requirements
-* **Windows:** Windows 10/11 x64, Visual Studio 2019/2022/2026 (with "Desktop development with C++") or MinGW-w64, and CMake 3.15+.
+* **Windows:** Windows 10/11 x64, Visual Studio 2019/2022/2026 (with "Desktop development with C++") or MinGW-w64, and CMake 3.15+. Bundled dependencies are included under `deps/`.
 * **Linux:** GCC 9+ or Clang 10+, CMake 3.15+, MariaDB client (`libmariadb-dev` / `libmysqlclient-dev`), PostgreSQL client (`libpq-dev`), and GMP library (`libgmp-dev`).
 
 ### Build with CMake (Recommended for Windows MSVC)

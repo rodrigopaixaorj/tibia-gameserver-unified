@@ -26,8 +26,16 @@ file(GLOB_RECURSE SERVER_SOURCES
 add_executable(tibia-server ${SERVER_SOURCES})
 
 if(WIN32)
-    # Check vcpkg default include & lib paths if present
-    if(EXISTS "D:/vcpkg/installed/x64-windows/include")
+    # Check bundled deps first, then fallback to vcpkg default include & lib paths
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/include")
+        target_include_directories(tibia-server PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/include/mysql"
+        )
+        target_link_directories(tibia-server PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/lib"
+        )
+    elseif(EXISTS "D:/vcpkg/installed/x64-windows/include")
         target_include_directories(tibia-server PRIVATE
             "D:/vcpkg/installed/x64-windows/include"
             "D:/vcpkg/installed/x64-windows/include/mysql"
