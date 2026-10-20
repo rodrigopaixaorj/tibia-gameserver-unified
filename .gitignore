@@ -36,6 +36,7 @@ CMakeScripts/
 *.o
 *.a
 *.lib
+!deps/lib/*.lib
 *.pch
 *.pdb
 *.pgc
