@@ -79,6 +79,7 @@ This project unifies the **Game Server**, **Login Server**, and a **Flexible Tri
 
 ```text
 tibia-server/
+├── build.bat                   # 1-click build script for Windows (compiles & copies to root)
 ├── CMakeLists.txt              # Modern CMake build configuration (MSVC & GCC/Clang)
 ├── Makefile                    # GNU Makefile for MinGW / Linux
 ├── config.cfg                  # Server configuration file (network, databases, rates, gameplay)
@@ -124,7 +125,17 @@ Each release package contains the ready-to-run `tibia-server.exe`, runtime DLLs 
 * **Windows:** Windows 10/11 x64, Visual Studio 2019/2022/2026 (with "Desktop development with C++") or MinGW-w64, and CMake 3.15+. Bundled dependencies are included under `deps/`.
 * **Linux:** GCC 9+ or Clang 10+, CMake 3.15+, MariaDB client (`libmariadb-dev` / `libmysqlclient-dev`), PostgreSQL client (`libpq-dev`), and GMP library (`libgmp-dev`).
 
-### Build with CMake (Recommended for Windows MSVC)
+### 1-Click Build on Windows (Recommended)
+Simply double-click or run the `build.bat` script from the project root:
+```cmd
+build.bat
+```
+* Automatically locates **CMake** (in system `PATH` or bundled with Visual Studio 2019/2022/2026).
+* Configures and builds the **Release (x64)** binary using parallel cores.
+* Automatically places the freshly built `tibia-server.exe` into the repository root.
+* You can also run `build.bat clean` to clean the build directory, or `build.bat rebuild` for a fresh clean compile.
+
+### Build with CMake CLI (Manual)
 ```bash
 # Clone the repository
 git clone https://github.com/rodrigopaixaorj/tibia-gameserver-unified.git
