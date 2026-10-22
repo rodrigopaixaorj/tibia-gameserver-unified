@@ -94,3 +94,8 @@ $RECYCLE.BIN/
 .*.swo
 *.bak
 *.pyc
+
+#############
+## CipSoft Server
+#############
+tibia.db

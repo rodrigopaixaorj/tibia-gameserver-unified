@@ -610,6 +610,43 @@ public:
 		if(Rank) Rank[0] = 0;
 		if(Title) Title[0] = 0;
 
+		// Fetch Guild, Rank, and Title from GuildMembers
+		if(Guild && Rank && Title){
+			stmt = mysql_stmt_init(m_MySQL);
+			if(stmt){
+				const char *gSql = "SELECT G.Name, GR.Name, GM.Title FROM GuildMembers GM "
+								   "JOIN Guilds G ON GM.GuildID = G.GuildID "
+								   "JOIN GuildRanks GR ON GM.GuildID = GR.GuildID AND GM.Rank = GR.Rank "
+								   "WHERE GM.CharacterID = ? LIMIT 1";
+				if(mysql_stmt_prepare(stmt, gSql, (unsigned long)strlen(gSql)) == 0){
+					MYSQL_BIND gParams[1];
+					memset(gParams, 0, sizeof(gParams));
+					gParams[0].buffer_type = MYSQL_TYPE_LONG;
+					gParams[0].buffer = &cid;
+					gParams[0].is_unsigned = 1;
+
+					if(mysql_stmt_bind_param(stmt, gParams) == 0 && mysql_stmt_execute(stmt) == 0){
+						char gName[64] = {0}, grName[64] = {0}, gmTitle[64] = {0};
+						unsigned long gLen = 0, grLen = 0, gtLen = 0;
+						MYSQL_BIND gRes[3];
+						memset(gRes, 0, sizeof(gRes));
+						gRes[0].buffer_type = MYSQL_TYPE_STRING; gRes[0].buffer = gName; gRes[0].buffer_length = sizeof(gName) - 1; gRes[0].length = &gLen;
+						gRes[1].buffer_type = MYSQL_TYPE_STRING; gRes[1].buffer = grName; gRes[1].buffer_length = sizeof(grName) - 1; gRes[1].length = &grLen;
+						gRes[2].buffer_type = MYSQL_TYPE_STRING; gRes[2].buffer = gmTitle; gRes[2].buffer_length = sizeof(gmTitle) - 1; gRes[2].length = &gtLen;
+
+						if(mysql_stmt_bind_result(stmt, gRes) == 0 && mysql_stmt_store_result(stmt) == 0){
+							if(mysql_stmt_fetch(stmt) == 0){
+								strncpy(Guild, gName, 30); Guild[30] = 0;
+								strncpy(Rank, grName, 30); Rank[30] = 0;
+								strncpy(Title, gmTitle, 30); Title[30] = 0;
+							}
+						}
+					}
+				}
+				mysql_stmt_close(stmt);
+			}
+		}
+
 		// Mark Online
 		stmt = mysql_stmt_init(m_MySQL);
 		if(stmt){

@@ -170,6 +170,17 @@ inline bool DB_VerifyPassword(const uint8 *AuthBlob, int AuthBlobSize, const cha
 		memcpy(Combined + PwdLen, Salt, 32);
 		SHA256Calculate(Combined, 32 + PwdLen, ComputedHash);
 		if(memcmp(ExpectedHash, ComputedHash, 32) == 0) return true;
+
+		// Try CipSoft native format: Hash (0..31), Salt (32..63) where Hash = SHA256(SHA256(pwd) ^ salt)
+		const uint8 *CipHash = AuthBlob;
+		const uint8 *CipSalt = AuthBlob + 32;
+		uint8 Digest[32];
+		SHA256Calculate(Password, PwdLen, Digest);
+		for(int i = 0; i < 32; i++){
+			Digest[i] ^= CipSalt[i];
+		}
+		SHA256Calculate(Digest, 32, Digest);
+		if(memcmp(CipHash, Digest, 32) == 0) return true;
 	}
 
 	// 3. Hex-encoded hash stored as text (e.g. 64 chars SHA256 or 128 chars Salt+Hash from AAC)
