@@ -79,6 +79,7 @@ This project unifies the **Game Server**, **Login Server**, and a **Flexible Tri
 
 ```text
 tibia-server/
+├── AAC Manager/                # Complete Web AAC Portal (Znote AAC tailored for CipSoft 7.72)
 ├── build.bat                   # 1-click build script for Windows (compiles & copies to root)
 ├── CMakeLists.txt              # Modern CMake build configuration (MSVC & GCC/Clang)
 ├── Makefile                    # GNU Makefile for MinGW / Linux
@@ -208,6 +209,107 @@ The server binary requires the official virgin CipSoft 7.7 data files (`dat/`, `
    ```
 3. Run `tibia-server.exe`.
 4. Connect using a standard **Tibia 7.72 Client** pointed to `127.0.0.1` (Port `7171`).
+
+---
+
+## AAC Manager (Web Portal & Account Creator)
+
+The repository includes a complete, pre-configured web portal based on **Znote AAC** located in the [`AAC Manager/`](AAC%20Manager/) directory. It is specially customized with a native **`CIPSOFT`** engine driver to communicate directly with the CipSoft 7.72 database tables without requiring TFS compatibility bridges.
+
+### Key Highlights
+* **Native CipSoft 7.72 Integration:** Directly manages accounts (`Accounts`), players (`Players`), equipment/inventory (`Player_Items`), skills (`Player_Skills`), depots (`Player_DepotItems`), storage values, and death records in real time.
+* **Modern Player Experience:**
+  * Clean, responsive interface optimized for both desktop and mobile web browsing.
+  * Account registration, recovery, and character creation with authentic 7.72 vocations and towns.
+  * Real-time online list, highscores (experience, magic level, skills), and server death logs.
+  * Interactive guild system with rank management, guild war declarations, and private guild boards.
+  * House browsing, direct purchase, and auction bidding.
+  * In-game bug reporting and support ticket helpdesk.
+* **Comprehensive Administration Suite:**
+  * Web-based GameMaster admin panel for publishing news, managing changelogs, moderating forum threads, reviewing reports, and applying bans.
+  * Built-in shop system supporting PayPal, PagSeguro, and PayGol payment gateways.
+  * Two-Factor Authentication (2FA) support via Authenticator apps (e.g., Authy, Google Authenticator).
+
+---
+
+### Prerequisites
+* **Web Server Stack:** Apache or Nginx with **PHP 5.6 to 8.x** (e.g., [UniServerZ](https://www.uniformserver.com/), [XAMPP](https://www.apachefriends.org/), or standard Linux LAMP/LEMP).
+* **Required PHP Extensions:** `pdo_mysql`, `curl`, `gd`, `openssl`, and `mbstring`.
+* **Database:** MySQL 5.7+ or MariaDB 10.3+ with the server database imported (`tibia_mysql_full.sql` or `schema_mysql.sql`).
+
+---
+
+### Installation & Setup Guide
+
+#### 1. Deploy Files to your Web Server
+Copy the contents of the [`AAC Manager/`](AAC%20Manager/) folder to your web server root or virtual host directory (e.g., `C:\UniServerZ\www\` or `/var/www/html/`).
+
+#### 2. Import Database Schemas
+The AAC Manager operates on the same MySQL database as the game server:
+1. Import the main server schema and initial data (if you have not done so already):
+   ```bash
+   mysql -u root -p tibia < tibia_mysql_full.sql
+   ```
+2. Import the AAC-specific web tables schema located at [`AAC Manager/engine/database/znote_schema.sql`](AAC%20Manager/engine/database/znote_schema.sql):
+   ```bash
+   mysql -u root -p tibia < "AAC Manager/engine/database/znote_schema.sql"
+   ```
+   *(Alternatively, navigating to the website in your browser for the first time will automatically prompt and generate the schema for you).*
+
+#### 3. Configure `config.php`
+Open `config.php` in your AAC root folder and verify the following essential settings:
+
+```php
+// 1. Engine selection (MUST be set to 'CIPSOFT')
+$config['ServerEngine'] = 'CIPSOFT';
+
+// 2. Site Title and Public URL
+$config['site_title'] = 'CipSoft 7.72 AAC';
+$config['site_url']   = 'http://localhost'; // or your domain / public IP
+
+// 3. Absolute path to your tibia-gameserver-unified folder
+$config['server_path'] = 'D:\\Games\\OTServ\\tibia-gameserver-unified';
+
+// 4. MySQL Connection Credentials (must match your config.cfg)
+$config['sqlHost']     = '127.0.0.1';
+$config['sqlPort']     = 3306;
+$config['sqlUser']     = 'root';
+$config['sqlPassword'] = 'your_mysql_password';
+$config['sqlDatabase'] = 'tibia';
+
+// 5. Web Administrator Access (Account numbers that have admin panel rights)
+$config['page_admin_access'] = array('111111', '666666');
+```
+
+#### 4. Configure Game Server (`config.cfg`)
+Ensure your `config.cfg` in the game server root is configured to use MySQL with direct database persistence:
+```ini
+# Database Driver Selection
+db_type = "mysql"
+
+# Direct player state synchronization with SQL
+player_storage_mode = "database"
+
+# MySQL Connection Details
+mysql_host = "127.0.0.1"
+mysql_port = 3306
+mysql_user = "root"
+mysql_password = "your_mysql_password"
+mysql_database = "tibia"
+mysql_reconnect = true
+```
+
+#### 5. Cache Directory Permissions
+Ensure that the `engine/cache/` directory has write permissions so the portal can cache telemetry, highscores, and server status:
+* **Linux:** `chmod -R 775 engine/cache`
+* **Windows:** Ensure the IIS/Apache/UniServerZ process user has Modify/Write permissions on the `engine/cache/` folder.
+
+#### 6. Access the Website
+Open your browser and navigate to:
+```text
+http://localhost/
+```
+You can now create new accounts and characters, explore the highscores, manage guilds, and log in as administrator using your configured account number.
 
 ---
 
