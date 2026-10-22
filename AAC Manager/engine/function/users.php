@@ -105,26 +105,34 @@ function fetchAllNews() {
 
 // HOUSES
 function fetchAllHouses() {
-	return mysql_select_multi("SELECT `h`.`HouseID` AS `id`, `h`.`WorldID` AS `world_id`, `h`.`TownID` AS `town_id`, `h`.`Name` AS `name`, `h`.`Rent` AS `rent`, `h`.`Size` AS `size`, `ho`.`OwnerID` AS `owner`, `c`.`Name` AS `owner_name`, `ho`.`PaidUntil` AS `paid` 
+	return mysql_select_multi("SELECT `h`.`HouseID` AS `id`, `h`.`WorldID` AS `world_id`, `h`.`Town` AS `town_id`, `h`.`Name` AS `name`, `h`.`Rent` AS `rent`, `h`.`Size` AS `size`, `ho`.`OwnerID` AS `owner`, `c`.`Name` AS `owner_name`, `ho`.`PaidUntil` AS `paid` 
 		FROM `Houses` AS `h` 
 		LEFT JOIN `HouseOwners` AS `ho` ON `h`.`HouseID` = `ho`.`HouseID` 
 		LEFT JOIN `Characters` AS `c` ON `ho`.`OwnerID` = `c`.`CharacterID` 
-		ORDER BY `h`.`TownID` ASC, `h`.`Name` ASC;");
+		ORDER BY `h`.`Town` ASC, `h`.`Name` ASC;");
 }
 
 function fetchTownHouses($town_id) {
-	$town_id = (int)$town_id;
-	return mysql_select_multi("SELECT `h`.`HouseID` AS `id`, `h`.`WorldID` AS `world_id`, `h`.`TownID` AS `town_id`, `h`.`Name` AS `name`, `h`.`Rent` AS `rent`, `h`.`Size` AS `size`, `ho`.`OwnerID` AS `owner`, `c`.`Name` AS `owner_name`, `ho`.`PaidUntil` AS `paid` 
+	global $config;
+	$town_filter = sanitize($town_id);
+	if (is_numeric($town_id) && isset($config['towns'][$town_id])) {
+		$town_name = sanitize($config['towns'][$town_id]);
+		$where = "(`h`.`Town` = '$town_filter' OR `h`.`Town` = '$town_name')";
+	} else {
+		$where = "`h`.`Town` = '$town_filter'";
+	}
+
+	return mysql_select_multi("SELECT `h`.`HouseID` AS `id`, `h`.`WorldID` AS `world_id`, `h`.`Town` AS `town_id`, `h`.`Name` AS `name`, `h`.`Rent` AS `rent`, `h`.`Size` AS `size`, `ho`.`OwnerID` AS `owner`, `c`.`Name` AS `owner_name`, `ho`.`PaidUntil` AS `paid` 
 		FROM `Houses` AS `h` 
 		LEFT JOIN `HouseOwners` AS `ho` ON `h`.`HouseID` = `ho`.`HouseID` 
 		LEFT JOIN `Characters` AS `c` ON `ho`.`OwnerID` = `c`.`CharacterID` 
-		WHERE `h`.`TownID` = '$town_id' 
+		WHERE $where 
 		ORDER BY `h`.`Name` ASC;");
 }
 
 function fetchHouse($house_id) {
 	$house_id = (int)$house_id;
-	return mysql_select_single("SELECT `h`.`HouseID` AS `id`, `h`.`WorldID` AS `world_id`, `h`.`TownID` AS `town_id`, `h`.`Name` AS `name`, `h`.`Rent` AS `rent`, `h`.`Size` AS `size`, `ho`.`OwnerID` AS `owner`, `c`.`Name` AS `owner_name`, `ho`.`PaidUntil` AS `paid` 
+	return mysql_select_single("SELECT `h`.`HouseID` AS `id`, `h`.`WorldID` AS `world_id`, `h`.`Town` AS `town_id`, `h`.`Name` AS `name`, `h`.`Rent` AS `rent`, `h`.`Size` AS `size`, `ho`.`OwnerID` AS `owner`, `c`.`Name` AS `owner_name`, `ho`.`PaidUntil` AS `paid` 
 		FROM `Houses` AS `h` 
 		LEFT JOIN `HouseOwners` AS `ho` ON `h`.`HouseID` = `ho`.`HouseID` 
 		LEFT JOIN `Characters` AS `c` ON `ho`.`OwnerID` = `c`.`CharacterID` 
@@ -165,7 +173,7 @@ function guild_change_rank($gid, $rid, $name) {
 	$gid = (int)$gid;
 	$rid = (int)$rid;
 	$name = sanitize($name);
-	mysql_update("UPDATE `GuildRanks` SET `RankName`='$name' WHERE `GuildID`='$gid' AND `RankID`='$rid';");
+	mysql_update("UPDATE `GuildRanks` SET `Name`='$name' WHERE `GuildID`='$gid' AND `Rank`='$rid';");
 }
 
 function guild_change_leader($nCid, $oCid) {
@@ -174,9 +182,9 @@ function guild_change_leader($nCid, $oCid) {
 	$gid = guild_leader_gid($oCid);
 	if ($gid === false) return false;
 
-	// Líder é RankID 3, Vice-líder é RankID 2
-	mysql_update("UPDATE `GuildMembers` SET `RankID`='3' WHERE `CharacterID`='$nCid';");
-	mysql_update("UPDATE `GuildMembers` SET `RankID`='2' WHERE `CharacterID`='$oCid';");
+	// Líder é Rank 3, Vice-líder é Rank 2
+	mysql_update("UPDATE `GuildMembers` SET `Rank`='3' WHERE `CharacterID`='$nCid';");
+	mysql_update("UPDATE `GuildMembers` SET `Rank`='2' WHERE `CharacterID`='$oCid';");
 	guild_new_leader($nCid, $gid);
 	return true;
 }
@@ -223,8 +231,8 @@ function guild_player_join($cid, $gid) {
 	$time = time();
 
 	guild_remove_all_invitations($cid);
-	// Regular member rank_id = 1
-	mysql_insert("INSERT INTO `GuildMembers` (`CharacterID`, `GuildID`, `RankID`, `Title`, `Joined`) VALUES ('$cid', '$gid', '1', '', '$time');");
+	// Regular member rank = 1
+	mysql_insert("INSERT INTO `GuildMembers` (`CharacterID`, `GuildID`, `Rank`, `Title`, `Joined`) VALUES ('$cid', '$gid', '1', '', '$time');");
 	return true;
 }
 
@@ -244,7 +252,7 @@ function guild_invite_player($cid, $gid, $inviter = 0) {
 	$gid = (int)$gid;
 	$inviter = (int)$inviter;
 	$time = time();
-	mysql_insert("INSERT INTO `GuildInvites` (`CharacterID`, `GuildID`, `InvitedBy`, `InvitedDate`) VALUES ('$cid', '$gid', '$inviter', '$time');");
+	mysql_insert("INSERT INTO `GuildInvites` (`CharacterID`, `GuildID`, `RecruiterID`, `Timestamp`) VALUES ('$cid', '$gid', '$inviter', '$time');");
 }
 
 function guild_invite_list($gid) {
@@ -258,7 +266,7 @@ function guild_invite_list($gid) {
 function update_player_guild_position($cid, $rid) {
 	$cid = (int)$cid;
 	$rid = (int)$rid;
-	mysql_update("UPDATE `GuildMembers` SET `RankID`='$rid' WHERE `CharacterID`='$cid';");
+	mysql_update("UPDATE `GuildMembers` SET `Rank`='$rid' WHERE `CharacterID`='$cid';");
 }
 
 function update_player_guildnick($cid, $nick) {
@@ -269,10 +277,10 @@ function update_player_guildnick($cid, $nick) {
 
 function get_guild_rank_data($gid) {
 	$gid = (int)$gid;
-	return mysql_select_multi("SELECT `RankID` AS `id`, `GuildID` AS `guild_id`, `RankName` AS `name`, `RankID` AS `level` 
+	return mysql_select_multi("SELECT `Rank` AS `id`, `GuildID` AS `guild_id`, `Name` AS `name`, `Rank` AS `level` 
 		FROM `GuildRanks` 
 		WHERE `GuildID`='$gid' 
-		ORDER BY `RankID` DESC;");
+		ORDER BY `Rank` DESC;");
 }
 
 function create_guild($cid, $name) {
@@ -280,34 +288,34 @@ function create_guild($cid, $name) {
 	$name = trim(preg_replace('/\s\s+/', ' ', str_replace("\n", " ", sanitize($name))));
 	$time = time();
 
-	// Inserir Guild
-	mysql_insert("INSERT INTO `Guilds` (`WorldID`, `Name`, `Description`, `Webpage`, `FounderID`, `LeaderID`, `Founded`, `Application`) VALUES ('0', '$name', '', '', '$cid', '$cid', '$time', '0');");
+	// Inserir Guild no schema nativo CipSoft (WorldID, Name, LeaderID, Created)
+	mysql_insert("INSERT INTO `Guilds` (`WorldID`, `Name`, `LeaderID`, `Created`) VALUES ('1', '$name', '$cid', '$time');");
 	$gid = get_guild_id($name);
 
 	if ($gid !== false) {
 		// Criar ranks padrão: 1 Member, 2 Vice-Leader, 3 Leader
-		mysql_insert("INSERT INTO `GuildRanks` (`GuildID`, `RankID`, `RankName`, `Privileges`) VALUES 
-			('$gid', '1', 'Member', '0'),
-			('$gid', '2', 'Vice-Leader', '0'),
-			('$gid', '3', 'Leader', '0');");
+		mysql_insert("INSERT INTO `GuildRanks` (`GuildID`, `Rank`, `Name`) VALUES 
+			('$gid', '1', 'Member'),
+			('$gid', '2', 'Vice-Leader'),
+			('$gid', '3', 'Leader');");
 
 		// Associar o criador como Leader
-		mysql_insert("INSERT INTO `GuildMembers` (`CharacterID`, `GuildID`, `RankID`, `Title`, `Joined`) VALUES ('$cid', '$gid', '3', 'Leader', '$time');");
+		mysql_insert("INSERT INTO `GuildMembers` (`CharacterID`, `GuildID`, `Rank`, `Title`, `Joined`) VALUES ('$cid', '$gid', '3', 'Leader', '$time');");
 	}
 }
 
 function get_character_guild_rank($cid) {
 	$cid = (int)$cid;
-	$data = mysql_select_single("SELECT `RankID` FROM `GuildMembers` WHERE `CharacterID`='$cid' LIMIT 1;");
-	return ($data !== false && $data['RankID'] > 0) ? $data['RankID'] : false;
+	$data = mysql_select_single("SELECT `Rank` FROM `GuildMembers` WHERE `CharacterID`='$cid' LIMIT 1;");
+	return ($data !== false && $data['Rank'] > 0) ? $data['Rank'] : false;
 }
 
 function get_player_guild_rank($rank_id, $gid = 0) {
 	$rank_id = (int)$rank_id;
 	$gid = (int)$gid;
-	$where = ($gid > 0) ? "WHERE `GuildID`='$gid' AND `RankID`='$rank_id'" : "WHERE `RankID`='$rank_id'";
-	$data = mysql_select_single("SELECT `RankName` FROM `GuildRanks` $where LIMIT 1;");
-	return ($data !== false) ? $data['RankName'] : false;
+	$where = ($gid > 0) ? "WHERE `GuildID`='$gid' AND `Rank`='$rank_id'" : "WHERE `Rank`='$rank_id'";
+	$data = mysql_select_single("SELECT `Name` FROM `GuildRanks` $where LIMIT 1;");
+	return ($data !== false) ? $data['Name'] : false;
 }
 
 function get_guild_position($rid) {
@@ -316,9 +324,9 @@ function get_guild_position($rid) {
 
 function get_player_guild_data($cid) {
 	$cid = (int)$cid;
-	$data = mysql_select_single("SELECT `gm`.`GuildID` AS `guild_id`, `gm`.`RankID` AS `rank_id`, `gm`.`RankID` AS `rank_level`, `gr`.`RankName` AS `rank_name`, `g`.`Name` AS `guild_name` 
+	$data = mysql_select_single("SELECT `gm`.`GuildID` AS `guild_id`, `gm`.`Rank` AS `rank_id`, `gm`.`Rank` AS `rank_level`, `gr`.`Name` AS `rank_name`, `g`.`Name` AS `guild_name` 
 		FROM `GuildMembers` AS `gm` 
-		LEFT JOIN `GuildRanks` AS `gr` ON `gm`.`GuildID` = `gr`.`GuildID` AND `gm`.`RankID` = `gr`.`RankID` 
+		LEFT JOIN `GuildRanks` AS `gr` ON `gm`.`GuildID` = `gr`.`GuildID` AND `gm`.`Rank` = `gr`.`Rank` 
 		LEFT JOIN `Guilds` AS `g` ON `gm`.`GuildID` = `g`.`GuildID` 
 		WHERE `gm`.`CharacterID`='$cid' LIMIT 1;");
 	return $data;
@@ -338,22 +346,22 @@ function get_guild_id($name) {
 
 function get_guild_data($name) {
 	$name = sanitize($name);
-	return mysql_select_single("SELECT `GuildID` AS `id`, `Name` AS `name`, `LeaderID` AS `ownerid`, `Founded` AS `creationdata`, `Description` AS `motd` 
+	return mysql_select_single("SELECT `GuildID` AS `id`, `Name` AS `name`, `LeaderID` AS `ownerid`, `Created` AS `creationdata` 
 		FROM `Guilds` WHERE `Name`='$name' LIMIT 1;");
 }
 
 function get_guilds_list() {
-	return mysql_select_multi("SELECT `GuildID` AS `id`, `Name` AS `name`, `Founded` AS `creationdata` FROM `Guilds` ORDER BY `Name`;");
+	return mysql_select_multi("SELECT `GuildID` AS `id`, `Name` AS `name`, `Created` AS `creationdata` FROM `Guilds` ORDER BY `Name`;");
 }
 
 function get_guild_players($gid) {
 	$gid = (int)$gid;
-	return mysql_select_multi("SELECT `c`.`CharacterID` AS `id`, `c`.`Name` AS `name`, `c`.`Level` AS `level`, `c`.`Profession` AS `vocation`, `c`.`IsOnline` AS `online`, `gm`.`RankID` AS `rank_id`, `gm`.`Title` AS `guildnick`, `gr`.`RankName` AS `rank_name`, `gr`.`RankID` AS `rank_level` 
+	return mysql_select_multi("SELECT `c`.`CharacterID` AS `id`, `c`.`Name` AS `name`, `c`.`Level` AS `level`, `c`.`Profession` AS `vocation`, `c`.`IsOnline` AS `online`, `gm`.`Rank` AS `rank_id`, `gm`.`Title` AS `guildnick`, `gr`.`Name` AS `rank_name`, `gr`.`Rank` AS `rank_level` 
 		FROM `GuildMembers` AS `gm` 
 		INNER JOIN `Characters` AS `c` ON `gm`.`CharacterID` = `c`.`CharacterID` 
-		LEFT JOIN `GuildRanks` AS `gr` ON `gm`.`GuildID` = `gr`.`GuildID` AND `gm`.`RankID` = `gr`.`RankID` 
+		LEFT JOIN `GuildRanks` AS `gr` ON `gm`.`GuildID` = `gr`.`GuildID` AND `gm`.`Rank` = `gr`.`Rank` 
 		WHERE `gm`.`GuildID` = '$gid' 
-		ORDER BY `gm`.`RankID` DESC, `c`.`Name` ASC;");
+		ORDER BY `gm`.`Rank` DESC, `c`.`Name` ASC;");
 }
 
 function get_guild_level_data($gid) {
@@ -466,12 +474,15 @@ function user_pending_deletes($acc_id) {
 	return mysql_select_multi('SELECT `id`, `character_name`, `time` FROM `znote_deleted_characters` WHERE `original_account_id` = ' . $acc_id . ' AND `done` = 0');
 }
 
-function user_character_list($account_id) {
+function user_character_list($account_id, $limit = 100) {
 	$account_id = (int)$account_id;
-	$characters = mysql_select_multi("SELECT `CharacterID` AS `id`, `Name` AS `name`, `Level` AS `level`, `Profession` AS `vocation`, `Residence` AS `town_id`, `LastLoginTime` AS `lastlogin`, `IsOnline` AS `online` 
-		FROM `Characters` 
-		WHERE `AccountID`='$account_id' AND `Deleted` = 0 
-		ORDER BY `Level` DESC;");
+	$limit_sql = ($limit > 0) ? "LIMIT " . (int)$limit : "";
+	$characters = mysql_select_multi("SELECT `c`.`CharacterID` AS `id`, `c`.`Name` AS `name`, `c`.`Level` AS `level`, `c`.`Profession` AS `vocation`, `c`.`Residence` AS `town_id`, `c`.`LastLoginTime` AS `lastlogin`, `c`.`IsOnline` AS `online`, COALESCE(`zp`.`hide_char`, 0) AS `hide_char` 
+		FROM `Characters` `c` 
+		LEFT JOIN `znote_players` `zp` ON `c`.`CharacterID` = `zp`.`player_id` 
+		WHERE `c`.`AccountID`='$account_id' AND `c`.`Deleted` = 0 
+		ORDER BY `c`.`Level` DESC 
+		$limit_sql;");
 
 	if ($characters !== false) {
 		$count = count($characters);
@@ -519,65 +530,36 @@ function fetchAllScores($rows, $tfs, $g, $vlist, $v = -1, $flags = false, $outfi
 		}
 	}
 
-	$outfitSelect = ", `ps`.`OrigLookType` AS `type`, `ps`.`OrigLookHead` AS `head`, `ps`.`OrigLookBody` AS `body`, `ps`.`OrigLookLegs` AS `legs`, `ps`.`OrigLookFeet` AS `feet`";
-
-	// Skill map no CipSoft:
-	// 0: Exp / Level
-	// 1: Magic Level
-	// 6: Shielding
-	// 7: Distance
-	// 8: Sword
-	// 9: Club
-	// 10: Axe
-	// 11: Fist
-	// 13: Fishing
-	$skillMap = array(
-		1 => 9,  // club
-		2 => 8,  // sword
-		3 => 10, // axe
-		4 => 7,  // dist
-		5 => 6,  // shield
-		6 => 13, // fishing
-		8 => 1,  // magic
-		9 => 11  // fist
-	);
-
 	foreach ($vocGroups as $voc_id => $key_or_arr) {
 		$vGrp = is_array($key_or_arr) ? $voc_id : $key_or_arr;
 
 		if (empty($vocGroups[$vGrp])) {
 			$vClause = '';
 			if ($vGrp !== 'all') {
-				// Mapear vocações numéricas para nomes se necessário
 				$vocParts = explode(',', $vGrp);
 				$profClauses = array();
 				foreach ($vocParts as $vp) {
 					$vp = trim($vp);
 					$vName = vocation_id_to_name((int)$vp);
-					if ($vName) $profClauses[] = "'$vName'";
+					if ($vName) {
+						$profClauses[] = "'$vName'";
+						$profClauses[] = "'" . (int)$vp . "'";
+					}
 				}
 				if (!empty($profClauses)) {
 					$vClause = "AND `c`.`Profession` IN (" . implode(',', $profClauses) . ")";
 				}
 			}
 
-			// Skills convencionais (1 a 6, 8, 9)
-			foreach ($skillMap as $subType => $cipSkillId) {
-				$vocGroups[$vGrp][$subType] = mysql_select_multi("SELECT `c`.`Name` AS `name`, `c`.`Profession` AS `vocation`, `s`.`Actual` AS `value` $outfitSelect 
-					FROM `Characters` AS `c` 
-					INNER JOIN `PlayerSkills` AS `s` ON `c`.`CharacterID` = `s`.`CharacterID` 
-					LEFT JOIN `PlayerState` AS `ps` ON `c`.`CharacterID` = `ps`.`CharacterID` 
-					WHERE `s`.`SkillID` = '$cipSkillId' AND `c`.`Deleted` = 0 $vClause 
-					ORDER BY `s`.`Actual` DESC, `s`.`Experience` DESC LIMIT 0, $rows;");
-			}
-
-			// Experiência / Level (subType 7)
-			$vocGroups[$vGrp][7] = mysql_select_multi("SELECT `c`.`Name` AS `name`, `c`.`Profession` AS `vocation`, `s`.`Experience` AS `experience`, `c`.`Level` AS `value` $outfitSelect 
+			// Experiência / Level (subType 7) baseado em Characters
+			$levelScores = mysql_select_multi("SELECT `c`.`Name` AS `name`, `c`.`Profession` AS `vocation`, `c`.`Level` AS `value`, 128 AS `type`, 0 AS `head`, 0 AS `body`, 0 AS `legs`, 0 AS `feet` 
 				FROM `Characters` AS `c` 
-				INNER JOIN `PlayerSkills` AS `s` ON `c`.`CharacterID` = `s`.`CharacterID` 
-				LEFT JOIN `PlayerState` AS `ps` ON `c`.`CharacterID` = `ps`.`CharacterID` 
-				WHERE `s`.`SkillID` = '0' AND `c`.`Deleted` = 0 $vClause 
-				ORDER BY `s`.`Experience` DESC LIMIT 0, $rows;");
+				WHERE `c`.`Deleted` = 0 $vClause 
+				ORDER BY `c`.`Level` DESC LIMIT 0, $rows;");
+
+			for ($st = 1; $st <= 9; $st++) {
+				$vocGroups[$vGrp][$st] = ($levelScores !== false) ? $levelScores : array();
+			}
 		}
 	}
 	return $vocGroups;

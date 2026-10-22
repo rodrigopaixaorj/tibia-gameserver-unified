@@ -11,10 +11,8 @@ if (!empty($_GET['name'])) {
 	$user_id = user_character_exist($name);
 
 	if ($user_id !== false) {
-		$char = mysql_select_single("SELECT `c`.`CharacterID`, `c`.`AccountID`, `c`.`Name`, `c`.`Sex`, `c`.`Level`, `c`.`Profession`, `c`.`Residence`, `c`.`LastLoginTime`, `c`.`IsOnline`,
-			`ps`.`OrigLookType`, `ps`.`OrigLookHead`, `ps`.`OrigLookBody`, `ps`.`OrigLookLegs`, `ps`.`OrigLookFeet`
+		$char = mysql_select_single("SELECT `c`.`CharacterID`, `c`.`AccountID`, `c`.`Name`, `c`.`Sex`, `c`.`Level`, `c`.`Profession`, `c`.`Residence`, `c`.`LastLoginTime`, `c`.`IsOnline`
 			FROM `Characters` AS `c`
-			LEFT JOIN `PlayerState` AS `ps` ON `c`.`CharacterID` = `ps`.`CharacterID`
 			WHERE `c`.`CharacterID` = '$user_id' AND `c`.`Deleted` = 0 LIMIT 1;");
 
 		if ($char === false) {
@@ -27,44 +25,20 @@ if (!empty($_GET['name'])) {
 		$account_flag = user_znote_account_data($char['AccountID'], 'flag');
 
 		// Dados de Guild
-		$guild_data = mysql_select_single("SELECT `g`.`GuildID`, `g`.`Name` AS `guild_name`, `gr`.`RankName` AS `rank_name` 
+		$guild_data = mysql_select_single("SELECT `g`.`GuildID`, `g`.`Name` AS `guild_name`, `gr`.`Name` AS `rank_name` 
 			FROM `GuildMembers` AS `gm`
 			INNER JOIN `Guilds` AS `g` ON `gm`.`GuildID` = `g`.`GuildID`
-			LEFT JOIN `GuildRanks` AS `gr` ON `gm`.`GuildID` = `gr`.`GuildID` AND `gm`.`RankID` = `gr`.`RankID`
+			LEFT JOIN `GuildRanks` AS `gr` ON `gm`.`GuildID` = `gr`.`GuildID` AND `gm`.`Rank` = `gr`.`Rank`
 			WHERE `gm`.`CharacterID` = '$user_id' LIMIT 1;");
 
 		// Dados de Casa
-		$houses = mysql_select_multi("SELECT `h`.`Name`, `h`.`TownID` 
+		$houses = mysql_select_multi("SELECT `h`.`Name`, `h`.`Town` AS `TownID` 
 			FROM `Houses` AS `h`
 			INNER JOIN `HouseOwners` AS `ho` ON `h`.`HouseID` = `ho`.`HouseID`
 			WHERE `ho`.`OwnerID` = '$user_id';");
 
 		// Deletion flag
 		$deletion_time = mysql_select_single("SELECT `time` FROM `znote_deleted_characters` WHERE `character_name`='$name' AND `done` = '0' LIMIT 1;");
-
-		// Skills do jogador
-		$skills_raw = mysql_select_multi("SELECT `SkillID`, `Actual`, `Maximum`, `Experience` FROM `PlayerSkills` WHERE `CharacterID` = '$user_id';");
-		$skills = array();
-		if ($skills_raw) {
-			foreach ($skills_raw as $s) {
-				$skills[(int)$s['SkillID']] = $s;
-			}
-		}
-
-		$exp = isset($skills[0]) ? number_format($skills[0]['Experience'], 0, '', ',') : 0;
-		$hp = isset($skills[2]) ? $skills[2]['Actual'] : 0;
-		$hpMax = isset($skills[2]) ? $skills[2]['Maximum'] : 0;
-		$mana = isset($skills[3]) ? $skills[3]['Actual'] : 0;
-		$manaMax = isset($skills[3]) ? $skills[3]['Maximum'] : 0;
-		$cap = isset($skills[5]) ? $skills[5]['Actual'] : 0;
-		$magic = isset($skills[1]) ? $skills[1]['Actual'] : 0;
-		$shield = isset($skills[6]) ? $skills[6]['Actual'] : 0;
-		$dist = isset($skills[7]) ? $skills[7]['Actual'] : 0;
-		$sword = isset($skills[8]) ? $skills[8]['Actual'] : 0;
-		$club = isset($skills[9]) ? $skills[9]['Actual'] : 0;
-		$axe = isset($skills[10]) ? $skills[10]['Actual'] : 0;
-		$fist = isset($skills[11]) ? $skills[11]['Actual'] : 0;
-		$fish = isset($skills[13]) ? $skills[13]['Actual'] : 0;
 		?>
 
 		<div class="profile-container">

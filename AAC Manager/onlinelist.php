@@ -14,9 +14,8 @@ $cache->setExpiration(15);
 
 if ($cache->hasExpired()) {
 	$array = mysql_select_multi("SELECT `c`.`Name` AS `name`, `c`.`Level` AS `level`, `c`.`Profession` AS `vocation`, `g`.`Name` AS `gname`, `za`.`flag`,
-		`ps`.`OrigLookType` AS `type`, `ps`.`OrigLookHead` AS `head`, `ps`.`OrigLookBody` AS `body`, `ps`.`OrigLookLegs` AS `legs`, `ps`.`OrigLookFeet` AS `feet`
+		128 AS `type`, 0 AS `head`, 0 AS `body`, 0 AS `legs`, 0 AS `feet`
 		FROM `Characters` AS `c`
-		LEFT JOIN `PlayerState` AS `ps` ON `c`.`CharacterID` = `ps`.`CharacterID`
 		LEFT JOIN `GuildMembers` AS `gm` ON `c`.`CharacterID` = `gm`.`CharacterID`
 		LEFT JOIN `Guilds` AS `g` ON `gm`.`GuildID` = `g`.`GuildID`
 		LEFT JOIN `znote_accounts` AS `za` ON `c`.`AccountID` = `za`.`account_id`

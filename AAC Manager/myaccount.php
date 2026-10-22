@@ -168,7 +168,10 @@ if ($render_page) {
 
 		<h2>Seus Personagens (<?php echo $char_count; ?> / <?php echo $config['max_characters']; ?>)</h2>
 		<?php
-		$char_array = user_character_list($session_user_id);
+		$char_array = user_character_list($session_user_id, 100);
+		if ($char_count > 100) {
+			echo '<p class="info" style="color: #666; font-size: 13px;"><em>Exibindo os primeiros 100 personagens (ordenados por Level) de um total de ' . $char_count . ' personagens vinculados a esta conta.</em></p>';
+		}
 		if ($char_array) {
 			?>
 			<div class="table-responsive">
@@ -195,7 +198,7 @@ if ($render_page) {
 							echo '<td>' . htmlspecialchars($value['town_id']) . '</td>';
 							echo '<td>' . $value['lastlogin'] . '</td>';
 							echo '<td>' . $value['online'] . '</td>';
-							echo '<td>' . hide_char_to_name(user_character_hide($value['name'])) . '</td>';
+							echo '<td>' . hide_char_to_name($value['hide_char']) . '</td>';
 							echo '</tr>';
 							$characters[] = $value['name'];
 						}

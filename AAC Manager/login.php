@@ -1,7 +1,6 @@
 <?php
 require_once 'engine/init.php';
 logged_in_redirect();
-include 'layout/overall/header.php';
 
 if (!empty($_POST)) {
 	if ($config['log_ip']) {
@@ -10,6 +9,7 @@ if (!empty($_POST)) {
 
 	$username = isset($_POST['username']) ? trim($_POST['username']) : '';
 	$password = isset($_POST['password']) ? $_POST['password'] : '';
+	$token_post = isset($_POST['token']) ? $_POST['token'] : '';
 
 	if (empty($username) || empty($password)) {
 		$errors[] = 'Você precisa informar o número da conta e a senha.';
@@ -17,10 +17,10 @@ if (!empty($_POST)) {
 		$errors[] = 'O número da conta deve ser numérico.';
 	} else if (strlen($username) > 32 || strlen($password) > 64) {
 		$errors[] = 'Número da conta ou senha muito longos.';
+	} else if ($config['use_token'] && !Token::isValid($token_post)) {
+		$errors[] = 'Token de segurança expirado ou inválido. Por favor, tente novamente.';
 	} else if (!user_exist($username)) {
 		$errors[] = 'Conta não encontrada. Verifique os dados ou <a href="register.php">crie uma nova conta</a>.';
-	} else if ($config['use_token'] && !Token::isValid($_POST['token'])) {
-		$errors[] = 'Token de segurança inválido. Tente novamente.';
 	} else {
 		$login = user_login($username, $password);
 		if ($login === false) {
@@ -50,37 +50,39 @@ if (!empty($_POST)) {
 	}
 }
 
-if (!empty($errors)) {
-	?>
-	<h1>Falha no Login</h1>
-	<?php
-	echo output_errors($errors);
-} else {
-	?>
-	<h1>Entrar na Conta</h1>
-	<p>Informe o número da sua conta e senha para acessar o painel de gerenciamento.</p>
-	<form action="login.php" method="post">
-		<ul class="form-list">
-			<li>
-				<label for="username">Número da Conta:</label>
-				<input type="text" name="username" id="username" placeholder="Ex: 111111" required autofocus>
-			</li>
-			<li>
-				<label for="password">Senha:</label>
-				<input type="password" name="password" id="password" required>
-			</li>
-			<?php if ($config['use_token']): ?>
-			<input type="hidden" name="token" value="<?php echo Token::generate(); ?>">
-			<?php endif; ?>
-			<li>
-				<input type="submit" value="Entrar">
-			</li>
-		</ul>
-	</form>
-	<p>Não tem uma conta ainda? <a href="register.php">Clique aqui para se registrar</a>.</p>
-	<p>Esqueceu seus dados de acesso? <a href="recovery.php">Recupere sua conta</a>.</p>
-	<?php
-}
+include 'layout/overall/header.php';
+?>
+<h1>Entrar na Conta</h1>
+<p>Informe o número da sua conta e senha para acessar o painel de gerenciamento.</p>
 
+<?php
+if (!empty($errors)) {
+	echo output_errors($errors);
+}
+?>
+
+<form action="login.php" method="post">
+	<ul class="form-list">
+		<li>
+			<label for="username">Número da Conta:</label>
+			<input type="text" name="username" id="username" placeholder="Ex: 111111" value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>" required autofocus>
+		</li>
+		<li>
+			<label for="password">Senha:</label>
+			<input type="password" name="password" id="password" required>
+		</li>
+		<?php if ($config['use_token']): ?>
+			<?php Token::create(); ?>
+		<?php endif; ?>
+		<li>
+			<input type="submit" value="Entrar" class="btn btn-primary">
+		</li>
+	</ul>
+</form>
+
+<p>Não tem uma conta ainda? <a href="register.php">Clique aqui para se registrar</a>.</p>
+<p>Esqueceu seus dados de acesso? <a href="recovery.php">Recupere sua conta</a>.</p>
+
+<?php
 include 'layout/overall/footer.php';
 ?>

@@ -8,7 +8,7 @@ function cipsoft_guild_list() {
 	$cache = new Cache('engine/cache/guildlist');
 	$cache->setExpiration(60);
 	if ($cache->hasExpired()) {
-		$guilds = mysql_select_multi("SELECT `g`.`GuildID` AS `id`, `g`.`Name` AS `name`, `g`.`Founded` AS `creationdata`, `g`.`Description` AS `motd`, 
+		$guilds = mysql_select_multi("SELECT `g`.`GuildID` AS `id`, `g`.`Name` AS `name`, `g`.`Created` AS `creationdata`, '' AS `motd`, 
 			(SELECT COUNT(`CharacterID`) FROM `GuildMembers` WHERE `GuildID` = `g`.`GuildID`) AS `total` 
 			FROM `Guilds` AS `g` 
 			ORDER BY `g`.`Name` ASC;");
