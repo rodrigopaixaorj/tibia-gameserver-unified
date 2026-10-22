@@ -1,6 +1,6 @@
 <div class="well widget">
 	<div class="header">
-		Casas por Cidade
+		Houses by Town
 	</div>
 	<div class="body">
 		<form action="houses.php" method="get">
@@ -11,7 +11,7 @@
 				}
 				?>
 			</select>
-			<input type="submit" value="Ver Casas" class="btn btn-primary btn-block">
+			<input type="submit" value="View Houses" class="btn btn-primary btn-block">
 		</form>
 	</div>
 </div>

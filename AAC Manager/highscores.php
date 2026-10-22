@@ -6,17 +6,16 @@ if ($config['log_ip']) {
 	znote_visitor_insert_detailed_data(3);
 }
 
-// Fetch highscore type
+// Fetch and sanitize GET values
 $type = (isset($_GET['type'])) ? (int)$_GET['type'] : 7;
-if ($type > 9 || $type < 1) $type = 7;
+if ($type < 1 || $type > 9) $type = 7;
 
-// Fetch highscore vocation
+$vocation = (isset($_GET['vocation'])) ? $_GET['vocation'] : 'all';
 $configVocations = $config['vocations'];
 $vocationIds = array_keys($configVocations);
 
-$vocation = 'all';
-if (isset($_GET['vocation']) && is_numeric($_GET['vocation'])) {
-	$vocation = (int)$_GET['vocation'];
+if ($vocation !== 'all') {
+	$vocation = (int)$vocation;
 	if (!in_array($vocation, $vocationIds)) {
 		$vocation = "all";
 	}
@@ -41,11 +40,11 @@ function skillName($type) {
 		4 => "Distance Fighting",
 		5 => "Shielding",
 		6 => "Fishing",
-		7 => "Experiência / Level",
+		7 => "Experience / Level",
 		8 => "Magic Level",
 		9 => "Fist Fighting",
 	);
-	return isset($types[(int)$type]) ? $types[(int)$type] : 'Experiência';
+	return isset($types[(int)$type]) ? $types[(int)$type] : 'Experience';
 }
 
 function pageCheck($index, $page, $rowPerPage) {
@@ -65,15 +64,15 @@ if ($cache->hasExpired()) {
 
 if ($vocGroups) {
 	$vocGroup = (is_array($vocGroups[$vocation])) ? $vocGroups[$vocation] : $vocGroups[$vocGroups[$vocation]];
-	$vocNameTitle = ($vocation === 'all') ? 'Todas as Vocações' : vocation_id_to_name($vocation);
+	$vocNameTitle = ($vocation === 'all') ? 'All Vocations' : vocation_id_to_name($vocation);
 	?>
 
-	<h1>Ranking: <?php echo skillName($type); ?> (<?php echo $vocNameTitle; ?>)</h1>
+	<h1>Highscores: <?php echo skillName($type); ?> (<?php echo $vocNameTitle; ?>)</h1>
 
 	<form action="highscores.php" method="GET" class="form-inline" style="margin-bottom: 20px;">
 		<div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
 			<select name="type" class="form-control">
-				<option value="7" <?php if ($type == 7) echo "selected"; ?>>Experiência / Level</option>
+				<option value="7" <?php if ($type == 7) echo "selected"; ?>>Experience / Level</option>
 				<option value="8" <?php if ($type == 8) echo "selected"; ?>>Magic Level</option>
 				<option value="5" <?php if ($type == 5) echo "selected"; ?>>Shielding</option>
 				<option value="2" <?php if ($type == 2) echo "selected"; ?>>Sword Fighting</option>
@@ -85,7 +84,7 @@ if ($vocGroups) {
 			</select>
 
 			<select name="vocation" class="form-control">
-				<option value="all" <?php if (!is_int($vocation)) echo "selected"; ?>>Todas as Vocações</option>
+				<option value="all" <?php if (!is_int($vocation)) echo "selected"; ?>>All Vocations</option>
 				<?php
 				foreach ($configVocations as $v_id => $v_data) {
 					if ($v_data['fromVoc'] === false) {
@@ -102,12 +101,12 @@ if ($vocGroups) {
 				$pages = ($totalScores > 0) ? ceil(min(($highscore['rows'] / $highscore['rowsPerPage']), ($totalScores / $highscore['rowsPerPage']))) : 1;
 				for ($i = 1; $i <= $pages; $i++) {
 					$sel = ($i == $page) ? " selected" : "";
-					echo "<option value='" . $i . "'" . $sel . ">Página: " . $i . "</option>";
+					echo "<option value='" . $i . "'" . $sel . ">Page: " . $i . "</option>";
 				}
 				?>
 			</select>
 
-			<input type="submit" value="Filtrar" class="btn btn-primary">
+			<input type="submit" value="Filter" class="btn btn-primary">
 		</div>
 	</form>
 
@@ -116,11 +115,10 @@ if ($vocGroups) {
 			<thead>
 				<tr class="yellow">
 					<?php if ($loadOutfits): ?><th style="width: 50px;">Outfit</th><?php endif; ?>
-					<th style="width: 60px;">Posição</th>
-					<th>Nome</th>
-					<th>Vocação</th>
+					<th style="width: 60px;">Rank</th>
+					<th>Name</th>
+					<th>Vocation</th>
 					<th><?php echo ($type === 7) ? 'Level' : 'Skill'; ?></th>
-					<?php if ($type === 7): ?><th>Experiência</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -128,8 +126,8 @@ if ($vocGroups) {
 				if (empty($vocGroup[$type])) {
 					?>
 					<tr>
-						<td colspan="<?php echo ($type === 7) ? ($loadOutfits ? 6 : 5) : ($loadOutfits ? 5 : 4); ?>">
-							Nenhum jogador classificado nesta categoria ainda.
+						<td colspan="<?php echo ($loadOutfits ? 5 : 4); ?>">
+							No players ranked in this category yet.
 						</td>
 					</tr>
 					<?php
@@ -146,13 +144,10 @@ if ($vocGroups) {
 										<img src="<?php echo $config['show_outfits']['imageServer']; ?>?id=<?php echo $row['type']; ?>&head=<?php echo $row['head']; ?>&body=<?php echo $row['body']; ?>&legs=<?php echo $row['legs']; ?>&feet=<?php echo $row['feet']; ?>" alt="outfit">
 									</td>
 								<?php endif; ?>
-								<td><strong><?php echo $i + 1; ?>º</strong></td>
+								<td><strong>#<?php echo $i + 1; ?></strong></td>
 								<td><?php echo $flag; ?><a href="characterprofile.php?name=<?php echo urlencode($row['name']); ?>"><strong><?php echo htmlspecialchars($row['name']); ?></strong></a></td>
 								<td><?php echo htmlspecialchars($vocName); ?></td>
 								<td><?php echo $row['value']; ?></td>
-								<?php if ($type === 7): ?>
-									<td><?php echo number_format($row['experience'], 0, '', ','); ?></td>
-								<?php endif; ?>
 							</tr>
 							<?php
 						}

@@ -9,7 +9,7 @@ if ($undelete_id > 0) {
 	$undelete_q1 = mysql_select_single('SELECT `character_name` FROM `znote_deleted_characters` WHERE `done` = 0 AND `id` = ' . $undelete_id . ' AND `original_account_id` = ' . $session_user_id . ' AND NOW() < `time`');
 	if ($undelete_q1) {
 		mysql_delete('DELETE FROM `znote_deleted_characters` WHERE `id` = ' . $undelete_id);
-		echo '<p class="success">A exclusão do personagem <strong>' . htmlspecialchars($undelete_q1['character_name']) . '</strong> foi cancelada com sucesso.</p>';
+		echo '<p class="success">Deletion of character <strong>' . htmlspecialchars($undelete_q1['character_name']) . '</strong> has been cancelled successfully.</p>';
 	}
 }
 #endregion
@@ -19,7 +19,7 @@ $render_page = true;
 // Handle POST
 if (!empty($_POST['selected_character']) && !empty($_POST['action'])) {
 	if (!Token::isValid($_POST['token'])) {
-		exit('Token de segurança inválido.');
+		exit('Invalid security token.');
 	}
 
 	$action = sanitize($_POST['action']);
@@ -29,7 +29,7 @@ if (!empty($_POST['selected_character']) && !empty($_POST['action'])) {
 		case 'update_comment':
 			if (user_character_account_id($char_name) === $session_user_id) {
 				user_update_comment(user_character_id($char_name), $_POST['comment']);
-				echo '<p class="success">Comentário atualizado com sucesso.</p>';
+				echo '<p class="success">Comment updated successfully.</p>';
 			}
 			break;
 
@@ -47,12 +47,12 @@ if (!empty($_POST['selected_character']) && !empty($_POST['action'])) {
 					if (!user_is_online($charid)) {
 						if (guild_leader_gid($charid) === false) {
 							user_delete_character_soft($charid);
-							echo '<p class="info">Solicitação de exclusão do personagem enviada com sucesso.</p>';
+							echo '<p class="info">Character deletion request submitted successfully.</p>';
 						} else {
-							echo '<p class="error">O personagem é líder de uma guilda. É necessário passar a liderança ou desfazer a guilda antes de excluí-lo.</p>';
+							echo '<p class="error">This character is a guild leader. Pass guild leadership or disband the guild before deleting.</p>';
 						}
 					} else {
-						echo '<p class="error">O personagem precisa estar offline para ser excluído.</p>';
+						echo '<p class="error">Character must be offline in-game to be deleted.</p>';
 					}
 				}
 			}
@@ -65,27 +65,27 @@ if (!empty($_POST['selected_character']) && !empty($_POST['action'])) {
 
 			if ($player !== false) {
 				if ($player['online'] == 1) {
-					$errors[] = 'O personagem precisa estar offline no jogo.';
+					$errors[] = 'Character must be offline in-game.';
 				}
 
 				$newname = validate_name($newname);
 				if ($newname === false) {
-					$errors[] = 'O nome não pode conter mais de 2 palavras.';
+					$errors[] = 'Name cannot contain more than 2 words.';
 				} elseif (empty($newname)) {
-					$errors[] = 'Por favor, informe um novo nome.';
+					$errors[] = 'Please provide a new character name.';
 				} elseif (user_character_exist($newname) !== false) {
-					$errors[] = 'Esse nome de personagem já está em uso.';
+					$errors[] = 'That character name is already in use.';
 				} elseif (!preg_match("/^[a-zA-Z ]+$/", $newname)) {
-					$errors[] = 'O nome pode conter apenas letras de a-z e espaços.';
+					$errors[] = 'Name can only contain letters a-z and spaces.';
 				} elseif (strlen($newname) < $config['minL'] || strlen($newname) > $config['maxL']) {
-					$errors[] = 'O nome deve ter entre ' . $config['minL'] . ' e ' . $config['maxL'] . ' caracteres.';
+					$errors[] = 'Name must be between ' . $config['minL'] . ' and ' . $config['maxL'] . ' characters.';
 				} elseif (!ctype_upper($newname[0])) {
-					$errors[] = 'A primeira letra de cada palavra deve ser maiúscula.';
+					$errors[] = 'The first letter of each word must be capitalized.';
 				}
 
 				if (empty($errors)) {
 					mysql_update("UPDATE `Characters` SET `Name`='$newname' WHERE `CharacterID`='" . $player['id'] . "' LIMIT 1;");
-					echo '<p class="success">Nome do personagem alterado com sucesso para: <strong>' . htmlspecialchars($newname) . '</strong>.</p>';
+					echo '<p class="success">Character name changed successfully to: <strong>' . htmlspecialchars($newname) . '</strong>.</p>';
 				} else {
 					echo output_errors($errors);
 				}
@@ -97,9 +97,9 @@ if (!empty($_POST['selected_character']) && !empty($_POST['action'])) {
 				$char_id = (int)user_character_id($char_name);
 				if (!user_is_online($char_id)) {
 					user_character_change_gender($char_name);
-					echo '<p class="success">Sexo do personagem ' . htmlspecialchars($char_name) . ' alterado com sucesso.</p>';
+					echo '<p class="success">Gender of character ' . htmlspecialchars($char_name) . ' changed successfully.</p>';
 				} else {
-					echo '<p class="error">O personagem precisa estar offline no jogo.</p>';
+					echo '<p class="error">Character must be offline in-game.</p>';
 				}
 			}
 			break;
@@ -109,17 +109,17 @@ if (!empty($_POST['selected_character']) && !empty($_POST['action'])) {
 			if (user_character_account_id($char_name) === $session_user_id) {
 				$comment_data = user_znote_character_data(user_character_id($char_name), 'comment');
 				?>
-				<h1>Editar Comentário: <?php echo htmlspecialchars($char_name); ?></h1>
+				<h1>Edit Comment: <?php echo htmlspecialchars($char_name); ?></h1>
 				<form action="myaccount.php" method="post">
 					<ul class="form-list">
 						<li>
 							<input name="action" type="hidden" value="update_comment">
 							<input name="selected_character" type="hidden" value="<?php echo htmlspecialchars($char_name); ?>">
-							<label for="comment">Comentário do Personagem:</label>
+							<label for="comment">Character Comment:</label>
 							<textarea name="comment" id="comment" cols="70" rows="8"><?php echo htmlspecialchars($comment_data['comment']); ?></textarea>
 						</li>
-						<input type="hidden" name="token" value="<?php echo Token::generate(); ?>">
-						<li><input type="submit" value="Salvar Comentário"></li>
+						<?php Token::create(); ?>
+						<li><input type="submit" value="Save Comment" class="btn btn-primary"></li>
 					</ul>
 				</form>
 				<?php
@@ -134,11 +134,11 @@ if ($render_page) {
 	if ($pending_delete) {
 		foreach ($pending_delete as $delete) {
 			if (new DateTime($delete['time']) > new DateTime()) {
-				echo '<div class="alert alert-warning">Atenção! O personagem <strong>' . htmlspecialchars($delete['character_name']) . '</strong> será excluído em ' . $delete['time'] . '. <a href="myaccount.php?cancel_delete_id=' . $delete['id'] . '">Cancelar exclusão</a>.</div>';
+				echo '<div class="alert alert-warning">Warning! Character <strong>' . htmlspecialchars($delete['character_name']) . '</strong> is scheduled for deletion at ' . $delete['time'] . '. <a href="myaccount.php?cancel_delete_id=' . $delete['id'] . '">Cancel deletion</a>.</div>';
 			} else {
 				user_delete_character(user_character_id($delete['character_name']));
 				mysql_update('UPDATE `znote_deleted_characters` SET `done` = 1 WHERE `id` = ' . $delete['id']);
-				echo '<div class="alert alert-info">Personagem <strong>' . htmlspecialchars($delete['character_name']) . '</strong> excluído permanentemente.</div>';
+				echo '<div class="alert alert-info">Character <strong>' . htmlspecialchars($delete['character_name']) . '</strong> permanently deleted.</div>';
 				$char_count--;
 			}
 		}
@@ -147,30 +147,30 @@ if ($render_page) {
 	$acc_data = user_data($session_user_id, 'id', 'email', 'premdays');
 	?>
 	<div id="myaccount">
-		<h1>Minha Conta</h1>
+		<h1>My Account</h1>
 		<div class="account-summary-card">
-			<p><strong>Número da Conta:</strong> <?php echo $acc_data['id']; ?></p>
-			<p><strong>E-mail:</strong> <?php echo htmlspecialchars($acc_data['email']); ?></p>
-			<p><strong>Status da Conta:</strong> 
+			<p><strong>Account Number:</strong> <?php echo $acc_data['id']; ?></p>
+			<p><strong>Email:</strong> <?php echo htmlspecialchars($acc_data['email']); ?></p>
+			<p><strong>Account Status:</strong> 
 				<?php 
 				if ($acc_data['premdays'] > 0) {
-					echo '<span style="color: green; font-weight: bold;">Conta Premium</span> (' . $acc_data['premdays'] . ' dias restantes)';
+					echo '<span style="color: green; font-weight: bold;">Premium Account</span> (' . $acc_data['premdays'] . ' days left)';
 				} else {
-					echo '<span style="color: gray;">Conta Gratuita (Free Account)</span>';
+					echo '<span style="color: gray;">Free Account</span>';
 				}
 				?>
 			</p>
 			<p>
-				<a href="changepassword.php" class="btn btn-secondary">Alterar Senha</a> 
-				<a href="createcharacter.php" class="btn btn-primary">Criar Novo Personagem</a>
+				<a href="changepassword.php" class="btn btn-secondary">Change Password</a> 
+				<a href="createcharacter.php" class="btn btn-primary">Create Character</a>
 			</p>
 		</div>
 
-		<h2>Seus Personagens (<?php echo $char_count; ?> / <?php echo $config['max_characters']; ?>)</h2>
+		<h2>Characters (<?php echo $char_count; ?> / <?php echo $config['max_characters']; ?>)</h2>
 		<?php
 		$char_array = user_character_list($session_user_id, 100);
 		if ($char_count > 100) {
-			echo '<p class="info" style="color: #666; font-size: 13px;"><em>Exibindo os primeiros 100 personagens (ordenados por Level) de um total de ' . $char_count . ' personagens vinculados a esta conta.</em></p>';
+			echo '<p class="info" style="color: #666; font-size: 13px;"><em>Displaying the first 100 characters (sorted by Level) of ' . $char_count . ' characters registered to this account.</em></p>';
 		}
 		if ($char_array) {
 			?>
@@ -178,13 +178,13 @@ if ($render_page) {
 				<table id="myaccountTable" class="table table-striped table-hover">
 					<thead>
 						<tr>
-							<th>Nome</th>
+							<th>Name</th>
 							<th>Level</th>
-							<th>Vocação</th>
-							<th>Cidade</th>
-							<th>Último Acesso</th>
+							<th>Vocation</th>
+							<th>Town</th>
+							<th>Last Login</th>
 							<th>Status</th>
-							<th>Oculto</th>
+							<th>Hidden</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -207,7 +207,7 @@ if ($render_page) {
 				</table>
 			</div>
 
-			<h3>Gerenciar Personagem</h3>
+			<h3>Manage Character</h3>
 			<form action="myaccount.php" method="post" class="form-inline">
 				<div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
 					<select id="selected_character" name="selected_character" class="form-control" required>
@@ -219,25 +219,25 @@ if ($render_page) {
 					</select>
 
 					<select id="action" name="action" class="form-control" onchange="changedOption(this)" required>
-						<option value="" disabled selected>Escolha uma ação...</option>
-						<option value="toggle_hide">Ocultar / Mostrar no perfil</option>
-						<option value="change_comment">Editar comentário</option>
-						<option value="change_gender">Alterar sexo</option>
-						<option value="change_name">Mudar nome</option>
-						<option value="delete_character">Excluir personagem</option>
+						<option value="" disabled selected>Choose an action...</option>
+						<option value="toggle_hide">Toggle profile visibility</option>
+						<option value="change_comment">Edit comment</option>
+						<option value="change_gender">Change gender</option>
+						<option value="change_name">Change name</option>
+						<option value="delete_character">Delete character</option>
 					</select>
 
 					<div id="new_name_container" style="display: none;">
-						<input type="text" name="newName" id="newName" placeholder="Novo Nome" class="form-control">
+						<input type="text" name="newName" id="newName" placeholder="New Character Name" class="form-control">
 					</div>
 
-					<input type="hidden" name="token" value="<?php echo Token::generate(); ?>">
-					<input id="submit_button" type="submit" value="Executar Ação" class="btn btn-primary">
+					<?php Token::create(); ?>
+					<input id="submit_button" type="submit" value="Submit" class="btn btn-primary">
 				</div>
 			</form>
 			<?php
 		} else {
-			echo '<p>Você ainda não possui nenhum personagem criado. <a href="createcharacter.php">Clique aqui para criar um agora</a>!</p>';
+			echo '<p>You have not created any characters yet. <a href="createcharacter.php">Click here to create one</a>!</p>';
 		}
 		?>
 	</div>
@@ -258,7 +258,7 @@ if ($render_page) {
 			var action = document.getElementById('action').value;
 			var char = document.getElementById('selected_character').value;
 			if (action === 'delete_character') {
-				if (!confirm("Tem certeza que deseja solicitar a EXCLUSÃO do personagem " + char + "?")) {
+				if (!confirm("Are you sure you want to request DELETION for character " + char + "?")) {
 					e.preventDefault();
 				}
 			}

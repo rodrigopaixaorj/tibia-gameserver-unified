@@ -1,7 +1,7 @@
 <?php
 /**
  * CipSoft Server Unified - Users Functions
- * Exclusivamente compatível com o schema nativo CipSoft 7.72 (MySQL)
+ * Exclusively compatible with native CipSoft 7.72 schema (MySQL)
  */
 
 // Fetch Images
@@ -182,7 +182,7 @@ function guild_change_leader($nCid, $oCid) {
 	$gid = guild_leader_gid($oCid);
 	if ($gid === false) return false;
 
-	// Líder é Rank 3, Vice-líder é Rank 2
+	// Leader is Rank 3, Vice-leader is Rank 2
 	mysql_update("UPDATE `GuildMembers` SET `Rank`='3' WHERE `CharacterID`='$nCid';");
 	mysql_update("UPDATE `GuildMembers` SET `Rank`='2' WHERE `CharacterID`='$oCid';");
 	guild_new_leader($nCid, $gid);
@@ -288,18 +288,18 @@ function create_guild($cid, $name) {
 	$name = trim(preg_replace('/\s\s+/', ' ', str_replace("\n", " ", sanitize($name))));
 	$time = time();
 
-	// Inserir Guild no schema nativo CipSoft (WorldID, Name, LeaderID, Created)
+	// Insert Guild into native CipSoft schema (WorldID, Name, LeaderID, Created)
 	mysql_insert("INSERT INTO `Guilds` (`WorldID`, `Name`, `LeaderID`, `Created`) VALUES ('1', '$name', '$cid', '$time');");
 	$gid = get_guild_id($name);
 
 	if ($gid !== false) {
-		// Criar ranks padrão: 1 Member, 2 Vice-Leader, 3 Leader
+		// Create default ranks: 1 Member, 2 Vice-Leader, 3 Leader
 		mysql_insert("INSERT INTO `GuildRanks` (`GuildID`, `Rank`, `Name`) VALUES 
 			('$gid', '1', 'Member'),
 			('$gid', '2', 'Vice-Leader'),
 			('$gid', '3', 'Leader');");
 
-		// Associar o criador como Leader
+		// Associate creator as Leader
 		mysql_insert("INSERT INTO `GuildMembers` (`CharacterID`, `GuildID`, `Rank`, `Title`, `Joined`) VALUES ('$cid', '$gid', '3', 'Leader', '$time');");
 	}
 }
@@ -551,7 +551,7 @@ function fetchAllScores($rows, $tfs, $g, $vlist, $v = -1, $flags = false, $outfi
 				}
 			}
 
-			// Experiência / Level (subType 7) baseado em Characters
+			// Experience / Level (subType 7) based on Characters
 			$levelScores = mysql_select_multi("SELECT `c`.`Name` AS `name`, `c`.`Profession` AS `vocation`, `c`.`Level` AS `value`, 128 AS `type`, 0 AS `head`, 0 AS `body`, 0 AS `legs`, 0 AS `feet` 
 				FROM `Characters` AS `c` 
 				WHERE `c`.`Deleted` = 0 $vClause 
@@ -573,32 +573,32 @@ function user_recover($mode, $edom, $email, $character, $ip) {
 
 	$char_data = mysql_select_single("SELECT `AccountID` FROM `Characters` WHERE `Name` = '$character' AND `Deleted` = 0 LIMIT 1;");
 	if ($char_data === false) {
-		echo '<p>Personagem não encontrado.</p>';
+		echo '<p>Character not found.</p>';
 		return;
 	}
 
 	$account_id = (int)$char_data['AccountID'];
 	$acc_data = mysql_select_single("SELECT `AccountID`, `Email`, `Auth` FROM `Accounts` WHERE `AccountID` = '$account_id' AND `Deleted` = 0 LIMIT 1;");
 	if ($acc_data === false || strtolower($acc_data['Email']) !== strtolower($email)) {
-		echo '<p>Dados da conta não coincidem.</p>';
+		echo '<p>Account records do not match.</p>';
 		return;
 	}
 
 	if ($mode === 'username') {
 		if (!cipsoft_verify_password($edom, $acc_data['Auth'])) {
-			echo '<p>Senha incorreta.</p>';
+			echo '<p>Incorrect password.</p>';
 			return;
 		}
-		echo '<br><p>Seu número de conta é:</p> <h3>'. $acc_data['AccountID'] .'</h3>';
+		echo '<br><p>Your account number is:</p> <h3>'. $acc_data['AccountID'] .'</h3>';
 	} else {
-		// Recovery de senha
+		// Password recovery
 		if ((int)$edom !== $account_id) {
-			echo '<p>Número de conta não confere.</p>';
+			echo '<p>Account number does not match.</p>';
 			return;
 		}
 		$newpass = substr(sha1(rand(1000000, 99999999)), 0, 10);
 		user_change_password($account_id, $newpass);
-		echo '<br><p>Sua nova senha é:</p> <h3>'. $newpass .'</h3><p>Guarde-a e altere após fazer login!</p>';
+		echo '<br><p>Your new password is:</p> <h3>'. $newpass .'</h3><p>Please keep it safe and change it upon logging in!</p>';
 	}
 }
 
@@ -631,7 +631,7 @@ function user_character_change_gender($name) {
 	if ($data !== false) {
 		$newSex = ($data['Sex'] == 1) ? 0 : 1;
 		mysql_update("UPDATE `Characters` SET `Sex`='$newSex' WHERE `CharacterID`='$user_id';");
-		// Atualizar também o PlayerState
+		// Also update PlayerState
 		$lookType = ($newSex == 1) ? 128 : 136;
 		mysql_update("UPDATE `PlayerState` SET `OrigLookType`='$lookType', `CurrLookType`='$lookType' WHERE `CharacterID`='$user_id';");
 	}
@@ -708,9 +708,9 @@ function user_create_account($register_data, $maildata) {
 	if ($maildata['register']) {
 		$thisurl = config('site_url') . "$_SERVER[REQUEST_URI]?authenticate&u=" . $acc_id . "&k=" . $activeKey;
 		$mailer = new Mail($maildata);
-		$title = "Ativação de Conta - " . $maildata['fromName'];
-		$body = "<h1>Ativação da sua conta</h1>";
-		$body .= "<p>Clique no link a seguir para ativar sua conta:</p>";
+		$title = "Account Activation - " . $maildata['fromName'];
+		$body = "<h1>Account Activation</h1>";
+		$body .= "<p>Click the following link to activate your account:</p>";
 		$body .= "<p><a href='$thisurl'>$thisurl</a></p>";
 		$mailer->sendMail($email, $title, $body, (string)$acc_id);
 	}
@@ -741,55 +741,82 @@ function user_create_character($character_data) {
 
 	// No vocation adjustments
 	if ($vocation_id === 0) {
-		$level = $create['novocation']['level'];
-		if ($create['novocation']['forceTown'] === true) {
-			$town_id = $create['novocation']['townId'];
-			$residence = town_id_to_name($town_id);
+		$level = 1;
+		$town_id = 10;
+		$residence = 'Rookgaard';
+		$prof_name = 'None';
+		$health = 150;
+		$mana = 0;
+		$cap = 400;
+		$exp = 0;
+		$speed = 220;
+		$nextExp = 100;
+
+		$posX = 32097;
+		$posY = 32205;
+		$posZ = 7;
+	} else {
+		$leveldiff = $level - $base['level'];
+		$health = $base['health'] + ($gains['hp'] * $leveldiff);
+		$mana = $base['mana'] + ($gains['mp'] * $leveldiff);
+		$cap = $base['cap'] + ($gains['cap'] * $leveldiff);
+		$exp = level_to_experience($level);
+		$speed = 220 + (2 * ($level - 1));
+		$nextExp = level_to_experience($level + 1);
+
+		if (isset($cnf['town_spawns'][$town_id])) {
+			$posX = $cnf['town_spawns'][$town_id]['x'];
+			$posY = $cnf['town_spawns'][$town_id]['y'];
+			$posZ = $cnf['town_spawns'][$town_id]['z'];
+		} else {
+			$posX = $cnf['default_pos']['x'];
+			$posY = $cnf['default_pos']['y'];
+			$posZ = $cnf['default_pos']['z'];
 		}
 	}
 
-	$leveldiff = $level - $base['level'];
-	$health = $base['health'] + ($gains['hp'] * $leveldiff);
-	$mana = $base['mana'] + ($gains['mp'] * $leveldiff);
-	$cap = $base['cap'] + ($gains['cap'] * $leveldiff);
-	$exp = level_to_experience($level);
-
 	$outfit = ($sex == 1) ? $create['male_outfit'] : $create['female_outfit'];
-	$posX = $cnf['default_pos']['x'];
-	$posY = $cnf['default_pos']['y'];
-	$posZ = $cnf['default_pos']['z'];
 
-	// 1. Inserir em Characters
+	$world_id = isset($cnf['world_id']) ? (int)$cnf['world_id'] : 1;
+
+	// 1. Insert into Characters
 	mysql_insert("INSERT INTO `Characters` (`WorldID`, `AccountID`, `Name`, `Sex`, `Level`, `Profession`, `Residence`, `LastLoginTime`, `TutorActivities`, `IsOnline`, `Deleted`) 
-		VALUES ('0', '$account_id', '$name', '$sex', '$level', '$prof_name', '$residence', '0', '0', '0', '0');");
+		VALUES ('$world_id', '$account_id', '$name', '$sex', '$level', '$prof_name', '$residence', '0', '0', '0', '0');");
 
 	$char_id = user_character_id($name);
 	if (!$char_id) return false;
 
-	// 2. Inserir em PlayerState (Obrigatório para o servidor carregar o personagem!)
-	mysql_insert("INSERT INTO `PlayerState` (`CharacterID`, `Race`, `Profession`, `OrigLookType`, `OrigLookHead`, `OrigLookBody`, `OrigLookLegs`, `OrigLookFeet`, `CurrLookType`, `CurrLookHead`, `CurrLookBody`, `CurrLookLegs`, `CurrLookFeet`, `StartX`, `StartY`, `StartZ`, `PosX`, `PosY`, `PosZ`, `FaceDirection`, `Conditions`, `Stamina`) 
-		VALUES ('$char_id', '1', '$vocation_id', '{$outfit['id']}', '{$outfit['head']}', '{$outfit['body']}', '{$outfit['legs']}', '{$outfit['feet']}', '{$outfit['id']}', '{$outfit['head']}', '{$outfit['body']}', '{$outfit['legs']}', '{$outfit['feet']}', '$posX', '$posY', '$posZ', '$posX', '$posY', '$posZ', '2', '', '2520');");
+	// 2. Insert into PlayerState (Required for CipSoft game server)
+	mysql_insert("INSERT INTO `PlayerState` (`CharacterID`, `Race`, `Profession`, `OrigLookType`, `OrigLookHead`, `OrigLookBody`, `OrigLookLegs`, `OrigLookFeet`, `CurrLookType`, `CurrLookHead`, `CurrLookBody`, `CurrLookLegs`, `CurrLookFeet`, `StartX`, `StartY`, `StartZ`, `PosX`, `PosY`, `PosZ`, `PlayerkillerEnd`) 
+		VALUES ('$char_id', '1', '$vocation_id', '{$outfit['id']}', '{$outfit['head']}', '{$outfit['body']}', '{$outfit['legs']}', '{$outfit['feet']}', '{$outfit['id']}', '{$outfit['head']}', '{$outfit['body']}', '{$outfit['legs']}', '{$outfit['feet']}', '$posX', '$posY', '$posZ', '$posX', '$posY', '$posZ', '0');");
 
-	// 3. Inserir em PlayerSkills (0=Exp, 1=Magic, 2=HP, 3=Mana, 4=Speed, 5=Cap, 6=Shield, 7=Dist, 8=Sword, 9=Club, 10=Axe, 11=Fist, 13=Fish)
+	// 3. Insert into PlayerSkills (16 columns: SkillID 0=Level, 1=Magic, 2=HP, 3=Mana, 4=Speed, 5=Cap, 6=Shield, 7=Dist, 8=Sword, 9=Club, 10=Axe, 11=Fist, 13=Fish, 22=Soul)
 	$speed = 220 + (2 * ($level - 1));
 	$nextExp = level_to_experience($level + 1);
 
-	mysql_insert("INSERT INTO `PlayerSkills` (`CharacterID`, `SkillID`, `Actual`, `Maximum`, `Experience`, `TargetCount`, `TargetActual`) VALUES 
-		('$char_id', 0, '$level', '$level', '$exp', 0, 0),
-		('$char_id', 1, '{$skills['magic']}', '{$skills['magic']}', 0, 0, 0),
-		('$char_id', 2, '$health', '$health', 0, 0, 0),
-		('$char_id', 3, '$mana', '$mana', 0, 0, 0),
-		('$char_id', 4, '$speed', '$speed', 0, 0, 0),
-		('$char_id', 5, '$cap', '$cap', 0, 0, 0),
-		('$char_id', 6, '{$skills['shield']}', '{$skills['shield']}', 0, 0, 0),
-		('$char_id', 7, '{$skills['dist']}', '{$skills['dist']}', 0, 0, 0),
-		('$char_id', 8, '{$skills['sword']}', '{$skills['sword']}', 0, 0, 0),
-		('$char_id', 9, '{$skills['club']}', '{$skills['club']}', 0, 0, 0),
-		('$char_id', 10, '{$skills['axe']}', '{$skills['axe']}', 0, 0, 0),
-		('$char_id', 11, '{$skills['fist']}', '{$skills['fist']}', 0, 0, 0),
-		('$char_id', 13, '{$skills['fishing']}', '{$skills['fishing']}', 0, 0, 0);");
+	$skillsToInsert = array(
+		array(0, $level, $level, 0, 0, 0, 0, 0, 0, 0, 0, $exp, 0, $nextExp, 0),
+		array(1, $skills['magic'], $skills['magic'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(2, $health, $health, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(3, $mana, $mana, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(4, $speed, $speed, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(5, $cap, $cap, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(6, $skills['shield'], $skills['shield'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(7, $skills['dist'], $skills['dist'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(8, $skills['sword'], $skills['sword'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(9, $skills['club'], $skills['club'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(10, $skills['axe'], $skills['axe'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(11, $skills['fist'], $skills['fist'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(13, $skills['fishing'], $skills['fishing'], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		array(22, 100, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+	);
 
-	// 4. Inserir em znote_players
+	foreach ($skillsToInsert as $s) {
+		mysql_insert("REPLACE INTO `PlayerSkills` (`CharacterID`, `SkillID`, `Actual`, `Maximum`, `Minimum`, `DeltaAct`, `MagicDeltaAct`, `Cycle`, `MaxCycle`, `Count`, `MaxCount`, `AddLevel`, `Experience`, `FactorPercent`, `NextLevel`, `Delta`) 
+			VALUES ('$char_id', '{$s[0]}', '{$s[1]}', '{$s[2]}', '{$s[3]}', '{$s[4]}', '{$s[5]}', '{$s[6]}', '{$s[7]}', '{$s[8]}', '{$s[9]}', '{$s[10]}', '{$s[11]}', '{$s[12]}', '{$s[13]}', '{$s[14]}');");
+	}
+
+	// 4. Insert into znote_players
 	$created_time = time();
 	mysql_insert("INSERT INTO `znote_players` (`player_id`, `created`, `hide_char`, `comment`) VALUES ('$char_id', '$created_time', '0', '');");
 

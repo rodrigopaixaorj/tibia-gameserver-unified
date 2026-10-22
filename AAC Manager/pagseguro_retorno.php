@@ -1,26 +1,26 @@
 <?php
 	/*
-		Instalação
-			- Configurando Pagseguro (Acessar https://pagseguro.uol.com.br/preferencias/integracoes.jhtml)
-				- Notificação de Transação:
-					- http://you-site/pagseguro_ipn.php
-				- Página de redirecionamento:
-					- A. Página fixa de redirecionamento
-						- http://you-site/pagseguro_retorno.php
-					- B. Redirecionamento com o código da transação
+		Installation
+			- Configure PagSeguro (Access https://pagseguro.uol.com.br/preferencias/integracoes.jhtml)
+				- Transaction Notification:
+					- http://your-site/pagseguro_ipn.php
+				- Redirect Page:
+					- A. Static redirect page
+						- http://your-site/pagseguro_retorno.php
+					- B. Redirect with transaction code
 						- transaction
-				- Gerar o Token e copiar para a próxima etapa
+				- Generate Token and copy for the next step
 
-			- Configurando ZnoteACC
+			- Configure Znote AAC
 				- config.php
 					- $config['pagseguro']['email']
-						- Seu email da conta do pagseguro que irá receber o pagamento
+						- Your PagSeguro account email to receive payments
 					- $config['pagseguro']['token']
-						- Preencher com o Token que pedi pra copiar na primeira etapa
+						- Token copied in the previous step
 					- $config['pagseguro']['product_name']
-						- Nome do Produto
+						- Product Name
 
-			- Instalando Tabelas
+			- Install Tables
 				CREATE TABLE IF NOT EXISTS `znote_pagseguro` (
 				  `id` int(11) NOT NULL AUTO_INCREMENT,
 				  `transaction` varchar(36) NOT NULL,

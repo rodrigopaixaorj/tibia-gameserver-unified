@@ -1,6 +1,6 @@
 <div class="well widget">
 	<div class="header">
-		Top 5 Jogadores
+		Top 5 Players
 	</div>
 	<div class="body">
 		<table>
@@ -18,10 +18,10 @@
 			if (!empty($players)) {
 				foreach ($players as $count => $player) {
 					$nr = $count + 1;
-					echo "<tr><td style='width: 25px;'><strong>{$nr}º</strong></td><td><a href='characterprofile.php?name=" . urlencode($player['name']) . "'><strong>" . htmlspecialchars($player['name']) . "</strong></a> (Level {$player['level']})</td></tr>";
+					echo "<tr><td style='width: 25px;'><strong>#{$nr}</strong></td><td><a href='characterprofile.php?name=" . urlencode($player['name']) . "'><strong>" . htmlspecialchars($player['name']) . "</strong></a> (Level {$player['level']})</td></tr>";
 				}
 			} else {
-				echo "<tr><td>Nenhum jogador classificado.</td></tr>";
+				echo "<tr><td>No ranked players found.</td></tr>";
 			}
 			?>
 		</table>

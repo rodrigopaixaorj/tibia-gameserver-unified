@@ -15,10 +15,10 @@ $messages = array();
 if (!empty($_POST)) {
 	if (empty($_POST['csrf_token']) || !hash_equals($_POST['csrf_token'], $_SESSION['csrf_token'])) {
 		http_response_code(400);
-		die("Erro: Token CSRF inválido!");
+		die("Error: Invalid CSRF token!");
 	}
 
-	// Sistema de Banimento
+	// Ban System
 	if (!empty($_POST['ban_char']) && !empty($_POST['ban_reason']) && !empty($_POST['ban_time']) && !empty($_POST['ban_comment'])) {
 		$charname = sanitize($_POST['ban_char']);
 		if (user_character_exist($charname)) {
@@ -27,40 +27,40 @@ if (!empty($_POST)) {
 			$comment = sanitize($_POST['ban_comment']);
 
 			if (set_rule_violation($charname, 1, 1, $reasonid, $time, $comment)) {
-				$messages[] = 'Banimento aplicado com sucesso ao personagem ' . htmlspecialchars($charname) . '.';
+				$messages[] = 'Ban successfully applied to character ' . htmlspecialchars($charname) . '.';
 			} else {
-				$messages[] = 'Erro ao registrar banimento para o personagem.';
+				$messages[] = 'Error recording ban for character.';
 			}
 		} else {
-			$messages[] = 'O personagem ' . htmlspecialchars($charname) . ' não existe.';
+			$messages[] = 'Character ' . htmlspecialchars($charname) . ' does not exist.';
 		}
 	}
 
-	// Excluir Personagem Permanentemente
+	// Permanently Delete Character
 	if (!empty($_POST['del_name'])) {
 		$del_name = sanitize($_POST['del_name']);
 		$cid = user_character_id($del_name);
 		if ($cid !== false) {
 			user_delete_character($cid);
-			$messages[] = 'Personagem ' . htmlspecialchars($del_name) . ' excluído permanentemente.';
+			$messages[] = 'Character ' . htmlspecialchars($del_name) . ' was permanently deleted.';
 		} else {
-			$messages[] = 'O personagem ' . htmlspecialchars($del_name) . ' não foi encontrado.';
+			$messages[] = 'Character ' . htmlspecialchars($del_name) . ' was not found.';
 		}
 	}
 
-	// Redefinir Senha da Conta
+	// Reset Account Password
 	if (!empty($_POST['reset_pass']) && !empty($_POST['new_pass'])) {
 		$char_name = sanitize($_POST['reset_pass']);
 		if (user_character_exist($char_name)) {
 			$acc_id = user_character_account_id($char_name);
 			user_change_password($acc_id, $_POST['new_pass']);
-			$messages[] = 'A senha da conta (' . $acc_id . ') do personagem ' . htmlspecialchars($char_name) . ' foi alterada para: ' . htmlspecialchars($_POST['new_pass']) . '.';
+			$messages[] = 'The password for account (' . $acc_id . ') of character ' . htmlspecialchars($char_name) . ' was changed to: ' . htmlspecialchars($_POST['new_pass']) . '.';
 		} else {
-			$messages[] = 'Personagem não encontrado.';
+			$messages[] = 'Character not found.';
 		}
 	}
 
-	// Dar Pontos de Loja
+	// Give Shop Points
 	if (!empty($_POST['points_char']) && !empty($_POST['points_value'])) {
 		$char = sanitize($_POST['points_char']);
 		$points = (int)$_POST['points_value'];
@@ -71,13 +71,13 @@ if (!empty($_POST)) {
 			$currPoints = ($znote_account !== false) ? (int)$znote_account['points'] : 0;
 			$totalPoints = $currPoints + $points;
 			mysql_update("UPDATE `znote_accounts` SET `points`='$totalPoints' WHERE `account_id`='$acc_id';");
-			$messages[] = 'Adicionado ' . $points . ' pontos à conta ' . $acc_id . ' (Total: ' . $totalPoints . ').';
+			$messages[] = 'Added ' . $points . ' points to account ' . $acc_id . ' (Total: ' . $totalPoints . ').';
 		} else {
-			$messages[] = 'Personagem não encontrado.';
+			$messages[] = 'Character not found.';
 		}
 	}
 
-	// Teleportar Jogador (Atualiza PlayerState)
+	// Teleport Player (Updates PlayerState)
 	if (!empty($_POST['teleport_char'])) {
 		$tp_char = sanitize($_POST['teleport_char']);
 		$tp_cid = user_character_id($tp_char);
@@ -89,16 +89,16 @@ if (!empty($_POST)) {
 				$townName = $config['towns'][$town_id];
 				mysql_update("UPDATE `Characters` SET `Residence`='$townName' WHERE `CharacterID`='$tp_cid' LIMIT 1;");
 			}
-			$messages[] = 'Personagem ' . htmlspecialchars($tp_char) . ' teleportado com sucesso para a posição padrão do templo.';
+			$messages[] = 'Character ' . htmlspecialchars($tp_char) . ' was successfully teleported to temple default position.';
 		} else {
-			$messages[] = 'Personagem não encontrado.';
+			$messages[] = 'Character not found.';
 		}
 	}
 }
 
 ?>
 
-<h1>Painel de Administração</h1>
+<h1>Administration Panel</h1>
 
 <?php
 if (!empty($messages)) {
@@ -111,74 +111,74 @@ if (!empty($messages)) {
 ?>
 
 <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
-	<!-- Banimentos -->
+	<!-- Bans -->
 	<div style="flex: 1; min-width: 300px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 4px;">
-		<h3>Banir Jogador</h3>
+		<h3>Ban Player</h3>
 		<form action="admin.php" method="post">
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<label for="ban_char">Nome do Personagem:</label>
+			<label for="ban_char">Character Name:</label>
 			<input type="text" name="ban_char" id="ban_char" class="form-control" required style="margin-bottom: 8px;">
 
-			<label for="ban_reason">Motivo:</label>
+			<label for="ban_reason">Reason:</label>
 			<select name="ban_reason" id="ban_reason" class="form-control" style="margin-bottom: 8px;">
 				<?php foreach ($config['ban_reason'] as $id => $reason): ?>
 					<option value="<?php echo $id + $enc; ?>"><?php echo htmlspecialchars($reason); ?></option>
 				<?php endforeach; ?>
 			</select>
 
-			<label for="ban_time">Duração:</label>
+			<label for="ban_time">Duration:</label>
 			<select name="ban_time" id="ban_time" class="form-control" style="margin-bottom: 8px;">
 				<?php foreach ($config['ban_time'] as $sec => $desc): ?>
 					<option value="<?php echo $sec + $enc; ?>"><?php echo htmlspecialchars($desc); ?></option>
 				<?php endforeach; ?>
 			</select>
 
-			<label for="ban_comment">Comentário:</label>
-			<input type="text" name="ban_comment" id="ban_comment" class="form-control" placeholder="Motivo detalhado" required style="margin-bottom: 12px;">
+			<label for="ban_comment">Comment:</label>
+			<input type="text" name="ban_comment" id="ban_comment" class="form-control" placeholder="Detailed comment" required style="margin-bottom: 12px;">
 
-			<input type="submit" value="Aplicar Banimento" class="btn btn-danger">
+			<input type="submit" value="Apply Ban" class="btn btn-danger">
 		</form>
 	</div>
 
-	<!-- Gerenciamento de Senha e Pontos -->
+	<!-- Password and Points Management -->
 	<div style="flex: 1; min-width: 300px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 4px;">
-		<h3>Redefinir Senha da Conta</h3>
+		<h3>Reset Account Password</h3>
 		<form action="admin.php" method="post" style="margin-bottom: 20px;">
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<input type="text" name="reset_pass" placeholder="Nome de um personagem" class="form-control" required style="margin-bottom: 8px;">
-			<input type="text" name="new_pass" placeholder="Nova senha" class="form-control" required style="margin-bottom: 8px;">
-			<input type="submit" value="Alterar Senha" class="btn btn-warning">
+			<input type="text" name="reset_pass" placeholder="Character name" class="form-control" required style="margin-bottom: 8px;">
+			<input type="text" name="new_pass" placeholder="New password" class="form-control" required style="margin-bottom: 8px;">
+			<input type="submit" value="Change Password" class="btn btn-warning">
 		</form>
 
-		<h3>Entregar Pontos de Loja</h3>
+		<h3>Deliver Shop Points</h3>
 		<form action="admin.php" method="post">
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<input type="text" name="points_char" placeholder="Nome do personagem" class="form-control" required style="margin-bottom: 8px;">
-			<input type="number" name="points_value" placeholder="Quantidade de pontos" class="form-control" required style="margin-bottom: 8px;">
-			<input type="submit" value="Entregar Pontos" class="btn btn-primary">
+			<input type="text" name="points_char" placeholder="Character name" class="form-control" required style="margin-bottom: 8px;">
+			<input type="number" name="points_value" placeholder="Points amount" class="form-control" required style="margin-bottom: 8px;">
+			<input type="submit" value="Deliver Points" class="btn btn-primary">
 		</form>
 	</div>
 
-	<!-- Teleport e Exclusão -->
+	<!-- Teleport and Delete -->
 	<div style="flex: 1; min-width: 300px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 4px;">
-		<h3>Teleportar Personagem para o Templo</h3>
+		<h3>Teleport Character to Temple</h3>
 		<form action="admin.php" method="post" style="margin-bottom: 20px;">
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<input type="text" name="teleport_char" placeholder="Nome do personagem" class="form-control" required style="margin-bottom: 8px;">
-			<label for="teleport_town">Cidade de Destino:</label>
+			<input type="text" name="teleport_char" placeholder="Character name" class="form-control" required style="margin-bottom: 8px;">
+			<label for="teleport_town">Destination Town:</label>
 			<select name="teleport_town" id="teleport_town" class="form-control" style="margin-bottom: 8px;">
 				<?php foreach ($config['towns'] as $tid => $tname): ?>
 					<option value="<?php echo $tid; ?>"><?php echo htmlspecialchars($tname); ?></option>
 				<?php endforeach; ?>
 			</select>
-			<input type="submit" value="Teleportar" class="btn btn-secondary">
+			<input type="submit" value="Teleport" class="btn btn-secondary">
 		</form>
 
-		<h3>Excluir Personagem</h3>
+		<h3>Delete Character</h3>
 		<form action="admin.php" method="post">
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<input type="text" name="del_name" placeholder="Nome do personagem" class="form-control" required style="margin-bottom: 8px;">
-			<input type="submit" value="Excluir Permanentemente" class="btn btn-danger" onclick="return confirm('ATENÇÃO: Deseja realmente excluir este personagem?');">
+			<input type="text" name="del_name" placeholder="Character name" class="form-control" required style="margin-bottom: 8px;">
+			<input type="submit" value="Permanently Delete" class="btn btn-danger" onclick="return confirm('WARNING: Are you sure you want to delete this character permanently?');">
 		</form>
 	</div>
 </div>

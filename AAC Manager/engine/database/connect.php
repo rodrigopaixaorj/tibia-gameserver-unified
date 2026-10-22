@@ -13,17 +13,17 @@ if (!function_exists("elapsedTime")) {
 }
 
 $install = "
-<h2>Instalação / Configuração do Banco de Dados:</h2>
+<h2>Database Installation & Setup:</h2>
 <ol>
 	<li>
 		<p>
-			Certifique-se de que o banco de dados do <b>tibia-gameserver-unified</b> foi importado (arquivo <code>schema_mysql.sql</code> ou <code>tibia_mysql_full.sql</code>).
+			Make sure the database of <b>tibia-gameserver-unified</b> has been imported (<code>schema_mysql.sql</code> or <code>tibia_mysql_full.sql</code>).
 		</p>
 	</li>
-	<li>Importe o <a href='/engine/database/znote_schema.sql'>Znote AAC schema</a> para o mesmo banco de dados no MySQL.</li>
+	<li>Import the <a href='/engine/database/znote_schema.sql'>Znote AAC schema</a> into the same MySQL database.</li>
 	<li>
 		<p>
-			Verifique o arquivo <code>config.php</code> com os dados corretos de conexão (host, porta, usuário, senha e banco de dados).
+			Verify your <code>config.php</code> file with the correct connection credentials (host, port, user, password, and database name).
 		</p>
 	</li>
 </ol>
@@ -33,7 +33,7 @@ $sqlPort = isset($config['sqlPort']) ? (int)$config['sqlPort'] : 3306;
 $connect = new mysqli($config['sqlHost'], $config['sqlUser'], $config['sqlPassword'], $config['sqlDatabase'], $sqlPort);
 
 if ($connect->connect_errno) {
-	die("Falha ao conectar no MySQL: (" . $connect->connect_errno . ") " . $connect->connect_error . $install);
+	die("Failed to connect to MySQL: (" . $connect->connect_errno . ") " . $connect->connect_error . $install);
 }
 
 $connect->set_charset("utf8mb4");

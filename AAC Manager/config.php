@@ -8,24 +8,25 @@
 	// Tested with TFS master items.xml (1.x)
 	$config['items'] = false;
 
-	// CipSoft Engine 7.72 Server (MySQL)
+	// Engine exclusiva para CipSoft 7.72 Server (MySQL)
 	$config['ServerEngine'] = 'CIPSOFT';
 	$config['CustomVersion'] = false;
 
 	$config['site_title'] = 'CipSoft 7.72 AAC';
-	$config['site_title_context'] = 'CipSoft Server - Tibia 7.72';
+	$config['site_title_context'] = 'Classic Tibia 7.72 Server';
 	$config['site_url'] = "http://localhost";
+	$config['world_id'] = 1;
 
-	// Server Path
-	$config['server_path'] = '';
+	// Server directory path
+	$config['server_path'] = 'D:\Games\OTServ\tibia-gameserver-unified';
 
 	// ------------------------ \\
 	// MYSQL CONNECTION DETAILS \\
 	// ------------------------ \\
 
 	$config['sqlUser'] = 'root';
-	$config['sqlPassword'] = 'root';
-	$config['sqlDatabase'] = 'tibia_unified';
+	$config['sqlPassword'] = '';
+	$config['sqlDatabase'] = 'tibia';
 	$config['sqlHost'] = '127.0.0.1';
 	$config['sqlPort'] = 3306;
 
@@ -257,7 +258,7 @@
 	// Vocation IDs, names and which vocation ID they got promoted from
 	$config['vocations'] = array(
 		0 => array(
-			'name' => 'No vocation',
+			'name' => 'No Vocation',
 			'fromVoc' => false
 		),
 		1 => array(
@@ -346,7 +347,7 @@
 	);
 	// Town ids and names: (In RME map editor, open map, click CTRL + T to view towns, their names and their IDs.
 	// townID => 'townName' ex: [1 => 'Rookgaard']
-	// Cidades CipSoft 7.72
+	// CipSoft 7.72 Towns
 	$config['towns'] = array(
 		1 => 'Thais',
 		2 => 'Carlin',
@@ -360,8 +361,22 @@
 		10 => 'Rookgaard'
 	);
 
+	// Town Temple Spawns
+	$config['town_spawns'] = array(
+		1 => array('x' => 32369, 'y' => 32241, 'z' => 7),  // Thais
+		2 => array('x' => 32360, 'y' => 31782, 'z' => 7),  // Carlin
+		3 => array('x' => 32649, 'y' => 31925, 'z' => 11), // Kazordoon
+		4 => array('x' => 32732, 'y' => 31634, 'z' => 7),  // Ab'Dendriel
+		5 => array('x' => 33217, 'y' => 31814, 'z' => 7),  // Edron
+		6 => array('x' => 32957, 'y' => 32076, 'z' => 7),  // Venore
+		7 => array('x' => 32595, 'y' => 32744, 'z' => 7),  // Port Hope
+		8 => array('x' => 33194, 'y' => 32853, 'z' => 8),  // Ankrahmun
+		9 => array('x' => 33213, 'y' => 32454, 'z' => 1),  // Darashia
+		10 => array('x' => 32097, 'y' => 32205, 'z' => 7)  // Rookgaard
+	);
+
 	$config['houseConfig'] = array(
-		'HouseListDefaultTown' => 1, // Thais como padrão
+		'HouseListDefaultTown' => 1, // Default town: Thais
 		'minimumBidSQM' => 100,
 		'auctionPeriod' => 24 * 60 * 60,
 		'housesPerPlayer' => 1,
@@ -373,7 +388,7 @@
 		),
 	);
 
-	// Posição inicial clássica (Thais Temple)
+	// Classic starting position (Thais Temple)
 	$config['default_pos'] = array(
 		'x' => 32369,
 		'y' => 32241,
@@ -395,14 +410,14 @@
 	// Create Character \\
 	// ---------------- \\
 
-	// Máximo de personagens por conta:
+	// Maximum characters per account:
 	$config['max_characters'] = 7;
 
-	// Vocações disponíveis para criação (1: Sorcerer, 2: Druid, 3: Paladin, 4: Knight)
-	$config['available_vocations'] = array(1, 2, 3, 4);
+	// Available vocations for character creation (0: No Vocation, 1: Sorcerer, 2: Druid, 3: Paladin, 4: Knight)
+	$config['available_vocations'] = array(0, 1, 2, 3, 4);
 
-	// Cidades disponíveis para criação
-	$config['available_towns'] = array(1, 2, 3, 4, 5, 6, 7, 8, 9);
+	// Available towns for character creation (1-9 Mainland, 10 Rookgaard)
+	$config['available_towns'] = array(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
 
 	$config['player'] = array(
 		'base' => array(
@@ -594,14 +609,14 @@
 	// Linux users needs to enable mod_rewrite php extention to make it work properly, so set it to false if your lost and using Linux.
 	$config['htwrite'] = true;
 
-	// Versão do cliente Tibia (7.72)
+	// Tibia client version (7.72)
 	$config['client'] = 772;
 
-	// Link para download do cliente 7.72
+	// Tibia 7.72 client download link
 	$config['client_download'] = 'http://tibiaclient.otslist.eu/download/tibia772.exe';
 	$config['client_download_linux'] = '';
 
-	$config['port'] = 7171; // Porta do jogo
+	$config['port'] = 7171; // Game login port
 
 	$config['status'] = array(
 		'status_check' => false,
@@ -624,7 +639,7 @@
 		// 60 * 15; // 15 minutes.
 		'lifespan' => 5,
 		// Store cache in memory/RAM? Requires PHP extension APCu
-		'memory' => true
+		'memory' => false
 	);
 
 	// WARNING! Account names written here will have admin access to web page!

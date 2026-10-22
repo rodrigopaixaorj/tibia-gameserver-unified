@@ -25,11 +25,11 @@ if ($cache->hasExpired()) {
 }
 ?>
 
-<h1>Lista de Casas</h1>
+<h1>House List</h1>
 
 <div class="well widget" style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 4px;">
 	<form action="houses.php" method="get" class="form-inline">
-		<label for="town"><strong>Selecione a Cidade:</strong></label>
+		<label for="town"><strong>Select Town:</strong></label>
 		<select name="town" id="town" class="form-control" style="margin: 0 10px;">
 			<?php
 			foreach ($config['towns'] as $id => $name) {
@@ -38,21 +38,21 @@ if ($cache->hasExpired()) {
 			}
 			?>
 		</select>
-		<input type="submit" value="Buscar Casas" class="btn btn-primary">
+		<input type="submit" value="Search Houses" class="btn btn-primary">
 	</form>
 </div>
 
-<h2>Casas em <?php echo htmlspecialchars($config['towns'][$selectedTown]); ?></h2>
+<h2>Houses in <?php echo htmlspecialchars($config['towns'][$selectedTown]); ?></h2>
 
 <?php if (!empty($houses)): ?>
 	<div class="table-responsive">
 		<table id="housesTable" class="table table-striped table-hover">
 			<thead>
 				<tr class="yellow">
-					<th>Nome da Casa</th>
-					<th>Tamanho</th>
-					<th>Aluguel</th>
-					<th>Proprietário</th>
+					<th>House Name</th>
+					<th>Size</th>
+					<th>Rent</th>
+					<th>Owner</th>
 					<th>Status</th>
 				</tr>
 			</thead>
@@ -64,23 +64,23 @@ if ($cache->hasExpired()) {
 								<strong><?php echo htmlspecialchars($h['name']); ?></strong>
 							</a>
 						</td>
-						<td><?php echo $h['size']; ?> m² (SQM)</td>
-						<td><?php echo number_format($h['rent'], 0, '', '.'); ?> gp</td>
+						<td><?php echo $h['size']; ?> SQM</td>
+						<td><?php echo number_format($h['rent'], 0, '', ','); ?> gp</td>
 						<td>
 							<?php
 							if (!empty($h['owner_name'])) {
 								echo '<a href="characterprofile.php?name=' . urlencode($h['owner_name']) . '">' . htmlspecialchars($h['owner_name']) . '</a>';
 							} else {
-								echo '<span style="color: gray;">Nenhum</span>';
+								echo '<span style="color: gray;">None</span>';
 							}
 							?>
 						</td>
 						<td>
 							<?php
 							if (!empty($h['owner'])) {
-								echo '<span style="color: red; font-weight: bold;">Ocupada</span>';
+								echo '<span style="color: red; font-weight: bold;">Rented</span>';
 							} else {
-								echo '<span style="color: green; font-weight: bold;">Disponível</span>';
+								echo '<span style="color: green; font-weight: bold;">Available</span>';
 							}
 							?>
 						</td>
@@ -90,7 +90,7 @@ if ($cache->hasExpired()) {
 		</table>
 	</div>
 <?php else: ?>
-	<div class="alert alert-info">Nenhuma casa encontrada cadastrada para a cidade de <?php echo htmlspecialchars($config['towns'][$selectedTown]); ?>.</div>
+	<div class="alert alert-info">No houses found registered for <?php echo htmlspecialchars($config['towns'][$selectedTown]); ?>.</div>
 <?php endif; ?>
 
 <?php include 'layout/overall/footer.php'; ?>

@@ -7,11 +7,11 @@ if ($config['require_login']['guildwars']) {
 
 include 'layout/overall/header.php';
 ?>
-<h1>Guerras de Guildas</h1>
+<h1>Guild Wars</h1>
 <div class="alert alert-info">
-	<p><strong>Informação sobre Guerras:</strong></p>
-	<p>Na versão clássica Tibia 7.72 (CipSoft), os confrontos e guerras entre guildas ocorrem diretamente no mundo de jogo através do sistema de PvP livre e disputas territoriais.</p>
-	<p>Confira a lista de guildas ativas em nosso servidor na página de <a href="guilds.php">Guildas</a>.</p>
+	<p><strong>War Information:</strong></p>
+	<p>In classic Tibia 7.72 (CipSoft), guild conflicts and wars take place directly in the game world through open PvP and territorial dominance.</p>
+	<p>Check the list of active guilds on our server on the <a href="guilds.php">Guilds</a> page.</p>
 </div>
 <?php
 include 'layout/overall/footer.php';

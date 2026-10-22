@@ -1,23 +1,23 @@
 <div class="well myaccount_widget widget" id="loginContainer">
 	<div class="header">
-		Conta: <?php echo $user_data['id']; ?>
+		Account: <?php echo $user_data['id']; ?>
 	</div>
 	<div class="body">
 		<ul class="linkbuttons">
 			<li>
-				<a href='myaccount.php'>Minha Conta</a>
+				<a href='myaccount.php'>My Account</a>
 			</li>
 			<li>
-				<a href='createcharacter.php'>Criar Personagem</a>
+				<a href='createcharacter.php'>Create Character</a>
 			</li>
 			<li>
-				<a href='changepassword.php'>Alterar Senha</a>
+				<a href='changepassword.php'>Change Password</a>
 			</li>
 			<li>
-				<a href='settings.php'>Configurações</a>
+				<a href='settings.php'>Settings</a>
 			</li>
 			<li>
-				<a href='logout.php'>Sair da Conta</a>
+				<a href='logout.php'>Logout</a>
 			</li>
 		</ul>
 	</div>

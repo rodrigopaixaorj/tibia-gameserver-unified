@@ -3,11 +3,11 @@ require_once 'engine/init.php';
 protect_page();
 include 'layout/overall/header.php';
 ?>
-<h1>Leilão de Personagens</h1>
+<h1>Character Auctions</h1>
 <div class="alert alert-info">
-	<p><strong>Aviso do Sistema:</strong></p>
-	<p>O sistema de leilão de personagens está indisponível para o servidor clássico Tibia 7.72 (CipSoft).</p>
-	<p>No Tibia clássico, as contas e personagens pertencem exclusivamente aos seus criadores conforme as regras do servidor.</p>
+	<p><strong>System Notice:</strong></p>
+	<p>The character auction system is disabled for the classic CipSoft Tibia 7.72 server.</p>
+	<p>In classic Tibia, accounts and characters belong exclusively to their creators in accordance with server rules.</p>
 </div>
 <?php
 include 'layout/overall/footer.php';

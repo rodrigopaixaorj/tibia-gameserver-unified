@@ -3,7 +3,7 @@ require_once 'engine/init.php';
 include 'layout/overall/header.php';
 ?>
 
-<h1>Quem está online?</h1>
+<h1>Who is Online?</h1>
 
 <?php
 $loadFlags = ($config['country_flags']['enabled'] && $config['country_flags']['onlinelist']);
@@ -35,10 +35,10 @@ if (!empty($array) && $array !== false) {
 			<thead>
 				<tr class="yellow">
 					<?php if ($loadOutfits): ?><th>Outfit</th><?php endif; ?>
-					<th>Nome</th>
-					<th>Guilda</th>
+					<th>Name</th>
+					<th>Guild</th>
 					<th>Level</th>
-					<th>Vocação</th>
+					<th>Vocation</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -65,10 +65,10 @@ if (!empty($array) && $array !== false) {
 			</tbody>
 		</table>
 	</div>
-	<p>Total de jogadores online: <strong><?php echo count($array); ?></strong></p>
+	<p>Total players online: <strong><?php echo count($array); ?></strong></p>
 	<?php
 } else {
-	echo '<div class="alert alert-info">Nenhum jogador está online no momento.</div>';
+	echo '<div class="alert alert-info">No players are currently online.</div>';
 }
 
 include 'layout/overall/footer.php';

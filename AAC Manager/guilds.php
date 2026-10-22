@@ -38,14 +38,14 @@ if (user_logged_in()) {
 	}
 }
 
-// Visualização de uma Guilda específica
+// Single guild view
 if (!empty($_GET['name'])) {
 	$guild_name = sanitize($_GET['name']);
 	$guild = get_guild_data($guild_name);
 
 	if (!$guild) {
-		echo '<div class="alert alert-danger">Guilda não encontrada.</div>';
-		echo '<p><a href="guilds.php" class="btn btn-primary">Voltar para a lista de guildas</a></p>';
+		echo '<div class="alert alert-danger">Guild not found.</div>';
+		echo '<p><a href="guilds.php" class="btn btn-primary">Back to guild list</a></p>';
 		include 'layout/overall/footer.php';
 		exit();
 	}
@@ -55,7 +55,7 @@ if (!empty($_GET['name'])) {
 	$ranks = get_guild_rank_data($gid);
 	$inv_data = guild_invite_list($gid);
 
-	// Determinar o maior nível de acesso do visitante logado nesta guilda (3=Leader, 2=Vice-Leader, 1=Member, 0=None)
+	// Highest access of current visitor (3=Leader, 2=Vice-Leader, 1=Member, 0=None)
 	$highest_access = 0;
 	if (user_logged_in() && $players) {
 		foreach ($players as $p) {
@@ -68,9 +68,9 @@ if (!empty($_GET['name'])) {
 		}
 	}
 
-	// Processamento POST
+	// Handle POST
 	if (user_logged_in() && !empty($_POST)) {
-		// Aceitar convite
+		// Accept invitation
 		if (!empty($_POST['joinguild'])) {
 			$join_id = (int)$_POST['joinguild'];
 			if (in_array($join_id, $user_char_ids)) {
@@ -80,15 +80,15 @@ if (!empty($_GET['name'])) {
 						header('Location: guilds.php?name=' . urlencode($guild_name));
 						exit();
 					} else {
-						echo '<div class="alert alert-danger">Este personagem já pertence a uma guilda.</div>';
+						echo '<div class="alert alert-danger">This character already belongs to a guild.</div>';
 					}
 				} else {
-					echo '<div class="alert alert-danger">O personagem precisa estar offline no jogo para entrar na guilda.</div>';
+					echo '<div class="alert alert-danger">Character must be offline in-game to join the guild.</div>';
 				}
 			}
 		}
 
-		// Rejeitar convite
+		// Reject invitation
 		if (!empty($_POST['reject_invite'])) {
 			$uninv_id = (int)$_POST['reject_invite'];
 			if (in_array($uninv_id, $user_char_ids) || $highest_access >= 2) {
@@ -98,28 +98,28 @@ if (!empty($_GET['name'])) {
 			}
 		}
 
-		// Sair da guilda
+		// Leave guild
 		if (!empty($_POST['leave_guild'])) {
 			$leave_id = (int)$_POST['leave_guild'];
 			if (in_array($leave_id, $user_char_ids)) {
 				if (!user_is_online($leave_id)) {
 					$p_rank = get_character_guild_rank($leave_id);
-					if ($p_rank != 3) { // Líder não pode sair sem passar a liderança ou disbandar
+					if ($p_rank != 3) {
 						guild_player_leave($leave_id);
 						header('Location: guilds.php?name=' . urlencode($guild_name));
 						exit();
 					} else {
-						echo '<div class="alert alert-danger">O líder não pode sair da guilda sem transferir a liderança ou desfazê-la.</div>';
+						echo '<div class="alert alert-danger">Guild leader cannot leave without transferring leadership or disbanding the guild.</div>';
 					}
 				} else {
-					echo '<div class="alert alert-danger">O personagem precisa estar offline no jogo para sair da guilda.</div>';
+					echo '<div class="alert alert-danger">Character must be offline in-game to leave the guild.</div>';
 				}
 			}
 		}
 
-		// Ações de Vice-Líder e Líder (Acesso >= 2)
+		// Vice-Leader & Leader Actions (Access >= 2)
 		if ($highest_access >= 2) {
-			// Convidar jogador
+			// Invite player
 			if (!empty($_POST['invite_player'])) {
 				$inv_name = sanitize($_POST['invite_player']);
 				$inv_cid = user_character_id($inv_name);
@@ -129,22 +129,14 @@ if (!empty($_GET['name'])) {
 						header('Location: guilds.php?name=' . urlencode($guild_name));
 						exit();
 					} else {
-						echo '<div class="alert alert-danger">Esse jogador já faz parte de uma guilda.</div>';
+						echo '<div class="alert alert-danger">That player is already in a guild.</div>';
 					}
 				} else {
-					echo '<div class="alert alert-danger">Personagem não encontrado.</div>';
+					echo '<div class="alert alert-danger">Character not found.</div>';
 				}
 			}
 
-			// Alterar MOTD (Mensagem da guilda)
-			if (isset($_POST['guild_motd'])) {
-				$new_motd = sanitize($_POST['guild_motd']);
-				mysql_update("UPDATE `Guilds` SET `Description`='$new_motd' WHERE `GuildID`='$gid' LIMIT 1;");
-				header('Location: guilds.php?name=' . urlencode($guild_name));
-				exit();
-			}
-
-			// Alterar Nick/Título de membro
+			// Update Guild Nick/Title
 			if (!empty($_POST['member_nick_char'])) {
 				$nick_cid = user_character_id($_POST['member_nick_char']);
 				$new_nick = sanitize($_POST['member_nick']);
@@ -153,7 +145,7 @@ if (!empty($_GET['name'])) {
 				exit();
 			}
 
-			// Promover / Rebaixar membro
+			// Promote / Demote member
 			if (!empty($_POST['promote_char']) && !empty($_POST['promote_rank'])) {
 				$prom_cid = user_character_id($_POST['promote_char']);
 				$prom_rid = (int)$_POST['promote_rank'];
@@ -164,7 +156,7 @@ if (!empty($_GET['name'])) {
 				}
 			}
 
-			// Remover / Expulsar membro
+			// Kick member
 			if (!empty($_POST['kick_member'])) {
 				$kick_cid = user_character_id($_POST['kick_member']);
 				$kick_rank = get_character_guild_rank($kick_cid);
@@ -176,9 +168,9 @@ if (!empty($_GET['name'])) {
 			}
 		}
 
-		// Ações exclusivas do Líder (Acesso == 3)
+		// Leader Exclusive Actions (Access == 3)
 		if ($highest_access == 3) {
-			// Alterar nomes dos cargos/ranks
+			// Edit rank names
 			if (isset($_POST['change_rank_titles'])) {
 				foreach ($ranks as $r) {
 					$fName = 'rank_name_' . $r['id'];
@@ -190,7 +182,7 @@ if (!empty($_GET['name'])) {
 				exit();
 			}
 
-			// Transferir liderança
+			// Transfer leadership
 			if (!empty($_POST['new_guild_leader'])) {
 				$new_lid = (int)$_POST['new_guild_leader'];
 				$old_lid = guild_leader($gid);
@@ -199,11 +191,11 @@ if (!empty($_GET['name'])) {
 					header('Location: guilds.php?name=' . urlencode($guild_name));
 					exit();
 				} else {
-					echo '<div class="alert alert-danger">Ambos os jogadores precisam estar offline para transferir a liderança.</div>';
+					echo '<div class="alert alert-danger">Both characters must be offline to transfer leadership.</div>';
 				}
 			}
 
-			// Desfazer guilda
+			// Disband guild
 			if (isset($_POST['disband_guild'])) {
 				guild_delete($gid);
 				header('Location: guilds.php');
@@ -213,22 +205,17 @@ if (!empty($_GET['name'])) {
 	}
 	?>
 
-	<h1>Guilda: <?php echo htmlspecialchars($guild['name']); ?></h1>
-	<?php if (!empty($guild['motd'])): ?>
-		<p class="guild-motd" style="font-style: italic; background: rgba(0,0,0,0.04); padding: 10px; border-radius: 4px;">
-			<?php echo nl2br(htmlspecialchars($guild['motd'])); ?>
-		</p>
-	<?php endif; ?>
+	<h1>Guild: <?php echo htmlspecialchars($guild['name']); ?></h1>
 
-	<h2>Membros da Guilda (<?php echo count($players); ?>)</h2>
+	<h2>Guild Members (<?php echo count($players); ?>)</h2>
 	<div class="table-responsive">
 		<table class="table table-striped table-hover">
 			<thead>
 				<tr class="yellow">
-					<th>Cargo (Rank)</th>
-					<th>Nome</th>
+					<th>Rank</th>
+					<th>Name</th>
 					<th>Level</th>
-					<th>Vocação</th>
+					<th>Vocation</th>
 					<th>Status</th>
 				</tr>
 			</thead>
@@ -255,13 +242,13 @@ if (!empty($_GET['name'])) {
 	</div>
 
 	<?php if (!empty($inv_data)): ?>
-		<h3>Personagens Convidados</h3>
+		<h3>Invited Characters</h3>
 		<div class="table-responsive">
 			<table class="table table-bordered">
 				<thead>
 					<tr>
-						<th>Nome</th>
-						<th>Ações</th>
+						<th>Name</th>
+						<th>Actions</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -272,19 +259,19 @@ if (!empty($_GET['name'])) {
 								<?php if (in_array((int)$inv['player_id'], $user_char_ids)): ?>
 									<form action="" method="post" style="display:inline;">
 										<input type="hidden" name="joinguild" value="<?php echo $inv['player_id']; ?>">
-										<input type="submit" value="Aceitar Convite" class="btn btn-success btn-sm">
+										<input type="submit" value="Accept Invitation" class="btn btn-success btn-sm">
 									</form>
 									<form action="" method="post" style="display:inline;">
 										<input type="hidden" name="reject_invite" value="<?php echo $inv['player_id']; ?>">
-										<input type="submit" value="Recusar" class="btn btn-secondary btn-sm">
+										<input type="submit" value="Reject" class="btn btn-secondary btn-sm">
 									</form>
 								<?php elseif ($highest_access >= 2): ?>
 									<form action="" method="post" style="display:inline;">
 										<input type="hidden" name="reject_invite" value="<?php echo $inv['player_id']; ?>">
-										<input type="submit" value="Cancelar Convite" class="btn btn-danger btn-sm">
+										<input type="submit" value="Cancel Invitation" class="btn btn-danger btn-sm">
 									</form>
 								<?php else: ?>
-									Aguardando resposta do jogador
+									Pending player response
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -295,7 +282,7 @@ if (!empty($_GET['name'])) {
 	<?php endif; ?>
 
 	<?php
-	// Opção para membro sair da guilda
+	// Option for members to leave
 	if (user_logged_in() && $players) {
 		$my_guild_chars = array();
 		foreach ($players as $p) {
@@ -305,14 +292,14 @@ if (!empty($_GET['name'])) {
 		}
 		if (!empty($my_guild_chars)) {
 			?>
-			<h3>Sair da Guilda</h3>
+			<h3>Leave Guild</h3>
 			<form action="" method="post" class="form-inline">
 				<select name="leave_guild" class="form-control" required>
 					<?php foreach ($my_guild_chars as $mgc): ?>
 						<option value="<?php echo $mgc['id']; ?>"><?php echo htmlspecialchars($mgc['name']); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<input type="submit" value="Sair da Guilda" class="btn btn-warning" onclick="return confirm('Deseja realmente sair da guilda?');">
+				<input type="submit" value="Leave Guild" class="btn btn-warning" onclick="return confirm('Are you sure you want to leave this guild?');">
 			</form>
 			<?php
 		}
@@ -321,36 +308,30 @@ if (!empty($_GET['name'])) {
 
 	<?php if ($highest_access >= 2): ?>
 		<hr>
-		<h2>Painel de Gerenciamento da Guilda</h2>
+		<h2>Guild Management Panel</h2>
 
 		<div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
 			<div style="flex: 1; min-width: 280px;">
-				<h3>Convidar Jogador</h3>
+				<h3>Invite Player</h3>
 				<form action="" method="post">
-					<input type="text" name="invite_player" placeholder="Nome do personagem" class="form-control" required style="margin-bottom: 8px;">
-					<input type="submit" value="Enviar Convite" class="btn btn-primary">
-				</form>
-
-				<h3 style="margin-top: 15px;">Atualizar Mensagem (MOTD)</h3>
-				<form action="" method="post">
-					<textarea name="guild_motd" class="form-control" rows="3" style="margin-bottom: 8px;"><?php echo htmlspecialchars($guild['motd']); ?></textarea>
-					<input type="submit" value="Salvar Mensagem" class="btn btn-secondary">
+					<input type="text" name="invite_player" placeholder="Character name" class="form-control" required style="margin-bottom: 8px;">
+					<input type="submit" value="Send Invitation" class="btn btn-primary">
 				</form>
 			</div>
 
 			<div style="flex: 1; min-width: 280px;">
-				<h3>Alterar Título / Nick</h3>
+				<h3>Change Member Title</h3>
 				<form action="" method="post">
 					<select name="member_nick_char" class="form-control" required style="margin-bottom: 8px;">
 						<?php foreach ($players as $p): ?>
 							<option value="<?php echo htmlspecialchars($p['name']); ?>"><?php echo htmlspecialchars($p['name']); ?></option>
 						<?php endforeach; ?>
 					</select>
-					<input type="text" name="member_nick" placeholder="Novo título (ou deixe vazio para remover)" class="form-control" style="margin-bottom: 8px;">
-					<input type="submit" value="Atualizar Título" class="btn btn-secondary">
+					<input type="text" name="member_nick" placeholder="New title (or empty to clear)" class="form-control" style="margin-bottom: 8px;">
+					<input type="submit" value="Update Title" class="btn btn-secondary">
 				</form>
 
-				<h3 style="margin-top: 15px;">Promover / Rebaixar Membro</h3>
+				<h3 style="margin-top: 15px;">Promote / Demote Member</h3>
 				<form action="" method="post">
 					<select name="promote_char" class="form-control" required style="margin-bottom: 8px;">
 						<?php foreach ($players as $p): if ($p['rank_level'] != 3): ?>
@@ -362,62 +343,60 @@ if (!empty($_GET['name'])) {
 							<option value="<?php echo $r['id']; ?>"><?php echo htmlspecialchars($r['name']); ?></option>
 						<?php endif; endforeach; ?>
 					</select>
-					<input type="submit" value="Alterar Cargo" class="btn btn-secondary">
+					<input type="submit" value="Change Rank" class="btn btn-secondary">
 				</form>
 			</div>
 		</div>
 
 		<?php if ($highest_access == 3): ?>
 			<hr>
-			<h3>Ações Exclusivas do Líder</h3>
+			<h3>Leader Exclusive Actions</h3>
 			<div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
 				<div style="flex: 1; min-width: 280px;">
-					<h4>Transferir Liderança</h4>
+					<h4>Transfer Leadership</h4>
 					<form action="" method="post">
 						<select name="new_guild_leader" class="form-control" required style="margin-bottom: 8px;">
 							<?php foreach ($players as $p): if ($p['rank_level'] != 3): ?>
 								<option value="<?php echo $p['id']; ?>"><?php echo htmlspecialchars($p['name']); ?></option>
 							<?php endif; endforeach; ?>
 						</select>
-						<input type="submit" value="Passar Liderança" class="btn btn-warning" onclick="return confirm('Tem certeza que deseja transferir a liderança da guilda?');">
+						<input type="submit" value="Transfer Leadership" class="btn btn-warning" onclick="return confirm('Are you sure you want to transfer guild leadership?');">
 					</form>
 				</div>
 				<div style="flex: 1; min-width: 280px;">
-					<h4>Desfazer Guilda (Disband)</h4>
+					<h4>Disband Guild</h4>
 					<form action="" method="post">
 						<input type="hidden" name="disband_guild" value="1">
-						<input type="submit" value="Desfazer Guilda Permanentemente" class="btn btn-danger" onclick="return confirm('ATENÇÃO: Desfazer a guilda é uma ação irreversível. Confirmar?');">
+						<input type="submit" value="Disband Guild Permanently" class="btn btn-danger" onclick="return confirm('WARNING: Disbanding the guild is irreversible. Are you sure?');">
 					</form>
 				</div>
 			</div>
 		<?php endif; ?>
 	<?php endif; ?>
 
-	<p style="margin-top: 25px;"><a href="guilds.php">&laquo; Voltar para a lista de todas as guildas</a></p>
+	<p style="margin-top: 25px;"><a href="guilds.php">&laquo; Back to all guilds</a></p>
 
 	<?php
 } else {
-	// LISTAGEM GERAL DE GUILDAS
+	// ALL GUILDS LIST
 	$guilds = cipsoft_guild_list();
 	?>
-	<h1>Guildas</h1>
+	<h1>Guilds</h1>
 
 	<?php if (!empty($guilds)): ?>
 		<div class="table-responsive">
 			<table id="guildsTable" class="table table-striped table-hover">
 				<thead>
 					<tr class="yellow">
-						<th>Nome da Guilda</th>
-						<th>Descrição</th>
-						<th>Membros</th>
-						<th>Level Médio</th>
+						<th>Guild Name</th>
+						<th>Members</th>
+						<th>Average Level</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php foreach ($guilds as $g): ?>
 						<tr onclick="window.location.href='guilds.php?name=<?php echo urlencode($g['name']); ?>';" style="cursor: pointer;">
 							<td><a href="guilds.php?name=<?php echo urlencode($g['name']); ?>"><strong><?php echo htmlspecialchars($g['name']); ?></strong></a></td>
-							<td><?php echo htmlspecialchars($g['motd']); ?></td>
 							<td><?php echo isset($g['level']['players']) ? $g['level']['players'] : 0; ?></td>
 							<td><?php echo isset($g['level']['avg']) ? $g['level']['avg'] : 0; ?></td>
 						</tr>
@@ -426,12 +405,12 @@ if (!empty($_GET['name'])) {
 			</table>
 		</div>
 	<?php else: ?>
-		<div class="alert alert-info">Nenhuma guilda foi criada ainda no servidor.</div>
+		<div class="alert alert-info">No guilds have been created yet.</div>
 	<?php endif; ?>
 
 	<?php if (user_logged_in()): ?>
 		<hr>
-		<h2>Fundar uma Nova Guilda</h2>
+		<h2>Found a New Guild</h2>
 		<?php
 		if (!empty($_POST['selected_char']) && !empty($_POST['guild_name'])) {
 			$founder_name = sanitize($_POST['selected_char']);
@@ -446,21 +425,21 @@ if (!empty($_GET['name'])) {
 							if (preg_match("/^[a-zA-Z ]+$/", $guild_create_name) && strlen($guild_create_name) <= 30) {
 								if (get_guild_id($guild_create_name) === false) {
 									create_guild($founder_id, $guild_create_name);
-									echo '<div class="alert alert-success">Guilda <strong>' . htmlspecialchars($guild_create_name) . '</strong> fundada com sucesso! <a href="guilds.php?name=' . urlencode($guild_create_name) . '">Clique aqui para gerenciá-la</a>.</div>';
+									echo '<div class="alert alert-success">Guild <strong>' . htmlspecialchars($guild_create_name) . '</strong> created successfully! <a href="guilds.php?name=' . urlencode($guild_create_name) . '">Click here to manage it</a>.</div>';
 								} else {
-									echo '<div class="alert alert-danger">Já existe uma guilda com este nome.</div>';
+									echo '<div class="alert alert-danger">A guild with this name already exists.</div>';
 								}
 							} else {
-								echo '<div class="alert alert-danger">O nome da guilda deve conter apenas letras e espaços (máximo 30 caracteres).</div>';
+								echo '<div class="alert alert-danger">Guild name can only contain letters and spaces (maximum 30 characters).</div>';
 							}
 						} else {
-							echo '<div class="alert alert-danger">Este personagem já pertence a uma guilda.</div>';
+							echo '<div class="alert alert-danger">This character already belongs to a guild.</div>';
 						}
 					} else {
-						echo '<div class="alert alert-danger">O personagem fundador deve estar offline no jogo.</div>';
+						echo '<div class="alert alert-danger">The founding character must be offline in-game.</div>';
 					}
 				} else {
-					echo '<div class="alert alert-danger">Seu personagem precisa ter level ' . $config['create_guild_level'] . ' ou superior para fundar uma guilda.</div>';
+					echo '<div class="alert alert-danger">Your character must be level ' . $config['create_guild_level'] . ' or higher to found a guild.</div>';
 				}
 			}
 		}
@@ -468,7 +447,7 @@ if (!empty($_GET['name'])) {
 		<form action="guilds.php" method="post" class="form-inline">
 			<ul class="form-list">
 				<li>
-					<label for="selected_char">Personagem Fundador:</label>
+					<label for="selected_char">Founding Character:</label>
 					<select name="selected_char" id="selected_char" required>
 						<?php foreach ($user_chars as $uc): ?>
 							<option value="<?php echo htmlspecialchars($uc); ?>"><?php echo htmlspecialchars($uc); ?></option>
@@ -476,16 +455,16 @@ if (!empty($_GET['name'])) {
 					</select>
 				</li>
 				<li>
-					<label for="guild_name">Nome da Guilda:</label>
-					<input type="text" name="guild_name" id="guild_name" placeholder="Ex: Knights of Honor" required maxlength="30">
+					<label for="guild_name">Guild Name:</label>
+					<input type="text" name="guild_name" id="guild_name" placeholder="e.g. Knights of Honor" required maxlength="30">
 				</li>
 				<li>
-					<input type="submit" value="Fundar Guilda" class="btn btn-primary">
+					<input type="submit" value="Found Guild" class="btn btn-primary">
 				</li>
 			</ul>
 		</form>
 	<?php else: ?>
-		<p><a href="login.php">Faça login</a> para fundar uma guilda ou gerenciar seus convites.</p>
+		<p><a href="login.php">Login</a> to found a guild or manage invitations.</p>
 	<?php endif; ?>
 
 	<?php

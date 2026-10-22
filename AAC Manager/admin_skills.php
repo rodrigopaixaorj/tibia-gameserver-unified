@@ -67,9 +67,9 @@ if (isset($_POST['pid']) && (int)$_POST['pid'] > 0) {
 			}
 		}
 
-		$message = 'Habilidades e atributos do personagem atualizados com sucesso!';
+		$message = 'Character skills and attributes updated successfully!';
 	} else {
-		$error = 'O jogador precisa estar OFFLINE no jogo para que suas habilidades possam ser editadas.';
+		$error = 'The player must be OFFLINE in-game to edit their skills.';
 	}
 }
 
@@ -92,13 +92,13 @@ if (!empty($name)) {
 			}
 		}
 	} else {
-		$error = 'Personagem não encontrado.';
+		$error = 'Character not found.';
 	}
 }
 
 ?>
 
-<h1>Editor de Habilidades de Personagens</h1>
+<h1>Character Skill Editor</h1>
 
 <?php if (!empty($message)): ?>
 	<div class="alert alert-success"><?php echo $message; ?></div>
@@ -108,13 +108,13 @@ if (!empty($name)) {
 <?php endif; ?>
 
 <form action="admin_skills.php" method="get" class="form-inline" style="margin-bottom: 25px;">
-	<label for="name"><strong>Buscar Personagem:</strong></label>
-	<input type="text" name="name" id="name" class="form-control" placeholder="Nome do personagem" value="<?php echo htmlspecialchars($name); ?>" required style="margin: 0 10px;">
-	<input type="submit" value="Carregar Habilidades" class="btn btn-primary">
+	<label for="name"><strong>Search Character:</strong></label>
+	<input type="text" name="name" id="name" class="form-control" placeholder="Character name" value="<?php echo htmlspecialchars($name); ?>" required style="margin: 0 10px;">
+	<input type="submit" value="Load Skills" class="btn btn-primary">
 </form>
 
 <?php if ($charData !== false): ?>
-	<h2>Editando: <?php echo htmlspecialchars($charData['Name']); ?></h2>
+	<h2>Editing: <?php echo htmlspecialchars($charData['Name']); ?></h2>
 	<form action="admin_skills.php" method="post">
 		<input type="hidden" name="pid" value="<?php echo $charData['CharacterID']; ?>">
 		<input type="hidden" name="name" value="<?php echo htmlspecialchars($charData['Name']); ?>">
@@ -126,7 +126,7 @@ if (!empty($name)) {
 					<input type="number" name="level" value="<?php echo $charData['Level']; ?>" class="form-control" required>
 				</div>
 				<div class="form-group" style="margin-bottom: 12px;">
-					<label>Vocação:</label>
+					<label>Vocation:</label>
 					<select name="vocation" class="form-control">
 						<?php foreach ($config['vocations'] as $vId => $vData): ?>
 							<option value="<?php echo $vId; ?>" <?php if ((int)$charData['voc_id'] === $vId) echo 'selected'; ?>>
@@ -177,7 +177,7 @@ if (!empty($name)) {
 		</div>
 
 		<div style="margin-top: 15px;">
-			<input type="submit" value="Salvar Alterações de Habilidade" class="btn btn-success">
+			<input type="submit" value="Save Skill Changes" class="btn btn-success">
 		</div>
 	</form>
 <?php endif; ?>

@@ -1,32 +1,32 @@
 <div class="well myaccount_widget widget" id="loginContainer">
 	<div class="header">
-		Administração
+		Administration
 	</div>
 	<div class="body">
 		<ul class="linkbuttons">
 			<li>
-				<a href='admin.php'>Painel de Admin</a>
+				<a href='admin.php'>Admin Panel</a>
 			</li>
 			<li>
-				<a href='admin_news.php'>Notícias</a>
+				<a href='admin_news.php'>News</a>
 			</li>
 			<li>
-				<a href='admin_gallery.php'>Galeria</a>
+				<a href='admin_gallery.php'>Gallery</a>
 			</li>
 			<li>
-				<a href='admin_skills.php'>Habilidades</a>
+				<a href='admin_skills.php'>Skills</a>
 			</li>
 			<li>
-				<a href='admin_reports.php'>Relatórios</a>
+				<a href='admin_reports.php'>Reports</a>
 			</li>
 			<li>
-				<a href='admin_helpdesk.php'>Atendimento</a>
+				<a href='admin_helpdesk.php'>Helpdesk</a>
 			</li>
 			<li>
-				<a href='admin_shop.php'>Loja</a>
+				<a href='admin_shop.php'>Shop</a>
 			</li>
 			<li>
-				<a href='admin_auction.php'>Leilões</a>
+				<a href='admin_auction.php'>Auctions</a>
 			</li>
 			<?php
 			$new = 0;

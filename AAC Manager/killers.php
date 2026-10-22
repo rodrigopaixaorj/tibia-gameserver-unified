@@ -38,16 +38,16 @@ if ($cache_last->hasExpired()) {
 }
 ?>
 
-<h1>Estatísticas de Assassinatos (PvP)</h1>
+<h1>Kill Statistics (PvP)</h1>
 
-<h2>Maiores Assassinos (Top Fraggers)</h2>
+<h2>Top Fraggers</h2>
 <?php if (!empty($killers)): ?>
 	<div class="table-responsive">
 		<table id="killersTable" class="table table-striped table-hover">
 			<thead>
 				<tr class="yellow">
-					<th>Jogador</th>
-					<th>Quantidade de Mortes Provocadas</th>
+					<th>Player</th>
+					<th>Frags</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -61,17 +61,17 @@ if ($cache_last->hasExpired()) {
 		</table>
 	</div>
 <?php else: ?>
-	<p>Nenhum assassinato registrado ainda.</p>
+	<p>No murders recorded yet.</p>
 <?php endif; ?>
 
-<h2>Maiores Vítimas</h2>
+<h2>Top Victims</h2>
 <?php if (!empty($victims)): ?>
 	<div class="table-responsive">
 		<table id="victimsTable" class="table table-striped table-hover">
 			<thead>
 				<tr class="yellow">
-					<th>Jogador</th>
-					<th>Total de Mortes Sofridas</th>
+					<th>Player</th>
+					<th>Total Deaths</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -85,18 +85,18 @@ if ($cache_last->hasExpired()) {
 		</table>
 	</div>
 <?php else: ?>
-	<p>Nenhuma vítima registrada ainda.</p>
+	<p>No victims recorded yet.</p>
 <?php endif; ?>
 
-<h2>Últimos Assassinatos (Player vs Player)</h2>
+<h2>Latest PvP Frags</h2>
 <?php if (!empty($latests)): ?>
 	<div class="table-responsive">
 		<table id="latestKillersTable" class="table table-striped table-hover">
 			<thead>
 				<tr class="yellow">
-					<th>Assassino</th>
-					<th>Data / Hora</th>
-					<th>Vítima</th>
+					<th>Killer</th>
+					<th>Date / Time</th>
+					<th>Victim</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -111,7 +111,7 @@ if ($cache_last->hasExpired()) {
 		</table>
 	</div>
 <?php else: ?>
-	<p>Nenhum assassinato PvP recente registrado.</p>
+	<p>No recent PvP kills recorded.</p>
 <?php endif; ?>
 
 <?php include 'layout/overall/footer.php'; ?>

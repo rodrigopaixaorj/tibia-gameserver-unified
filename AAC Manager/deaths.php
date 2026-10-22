@@ -14,23 +14,23 @@ if ($cache->hasExpired()) {
 }
 ?>
 
-<h1>Últimas Mortes</h1>
+<h1>Latest Deaths</h1>
 
 <?php if (!empty($deaths)): ?>
 	<div class="table-responsive">
 		<table id="deathsTable" class="table table-striped table-hover">
 			<thead>
 				<tr class="yellow">
-					<th>Vítima</th>
-					<th>Data / Hora</th>
-					<th>Causa / Assassino</th>
+					<th>Victim</th>
+					<th>Date / Time</th>
+					<th>Cause / Killer</th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php foreach ($deaths as $death): ?>
 					<tr>
 						<td>
-							No level <?php echo $death['level']; ?>: 
+							At level <?php echo $death['level']; ?>: 
 							<a href="characterprofile.php?name=<?php echo urlencode($death['victim']); ?>">
 								<strong><?php echo htmlspecialchars($death['victim']); ?></strong>
 							</a>
@@ -39,9 +39,9 @@ if ($cache->hasExpired()) {
 						<td>
 							<?php
 							if ($death['is_player'] == 1) {
-								echo 'Jogador: <a href="characterprofile.php?name=' . urlencode($death['killed_by']) . '"><strong>' . htmlspecialchars($death['killed_by']) . '</strong></a>';
+								echo 'Player: <a href="characterprofile.php?name=' . urlencode($death['killed_by']) . '"><strong>' . htmlspecialchars($death['killed_by']) . '</strong></a>';
 							} else {
-								echo 'Monstro/Ambiente: ' . htmlspecialchars($death['killed_by']);
+								echo 'Monster/Environment: ' . htmlspecialchars($death['killed_by']);
 							}
 							?>
 						</td>
@@ -51,7 +51,7 @@ if ($cache->hasExpired()) {
 		</table>
 	</div>
 <?php else: ?>
-	<div class="alert alert-info">Nenhuma morte registrada ainda no servidor.</div>
+	<div class="alert alert-info">No deaths recorded on the server yet.</div>
 <?php endif; ?>
 
 <?php include 'layout/overall/footer.php'; ?>

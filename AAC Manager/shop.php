@@ -2,7 +2,7 @@
 include 'layout/overall/header.php';
 
 if (isset($_GET['callback']) && $_GET['callback'] === 'processing') {
-	echo '<script>alert("Seu pagamento está sendo processado pelo PagSeguro...");</script>';
+	echo '<script>alert("Your payment is being processed...");</script>';
 }
 
 // Import from config:

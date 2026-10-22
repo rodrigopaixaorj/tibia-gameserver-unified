@@ -2,11 +2,11 @@
 require_once 'engine/init.php';
 include 'layout/overall/header.php';
 ?>
-<h1>Mercado e Negociações</h1>
+<h1>Market & Trading</h1>
 <div class="alert alert-info">
-	<p><strong>Comércio Clássico Tibia 7.72:</strong></p>
-	<p>Na versão 7.72 do Tibia (CipSoft), todo o comércio de itens e equipamentos entre jogadores é realizado de maneira clássica através do sistema de <strong>Safe Trade</strong> (clicando com o botão direito no item e selecionando <em>Trade with...</em>) ou anunciando nos canais de bate-papo de comércio (<em>Trade Channel</em>).</p>
-	<p>Negocie sempre com atenção e aproveite o verdadeiro comércio clássico do Tibia!</p>
+	<p><strong>Classic Tibia 7.72 Trading:</strong></p>
+	<p>In Tibia version 7.72 (CipSoft), all item and equipment trading between players is conducted the classic way using the in-game <strong>Safe Trade</strong> feature (right-clicking the item and choosing <em>Trade with...</em>) or by advertising in the trade chat channel (<em>Trade Channel</em>).</p>
+	<p>Always verify your trades carefully and enjoy authentic classic Tibia trading!</p>
 </div>
 <?php
 include 'layout/overall/footer.php';

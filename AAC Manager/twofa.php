@@ -3,11 +3,11 @@ require_once 'engine/init.php';
 protect_page();
 include 'layout/overall/header.php';
 ?>
-<h1>Autenticação de Dois Fatores (2FA)</h1>
+<h1>Two-Factor Authentication (2FA)</h1>
 <div class="alert alert-info">
-	<p><strong>Aviso de Compatibilidade:</strong></p>
-	<p>O cliente de jogo CipSoft Tibia 7.72 utiliza o protocolo clássico com número de conta e senha, não possuindo suporte nativo no cliente para tokens 2FA.</p>
-	<p>Para sua segurança, utilize sempre senhas fortes e guarde a sua Chave de Recuperação (Recovery Key) em local seguro.</p>
+	<p><strong>Compatibility Notice:</strong></p>
+	<p>The CipSoft Tibia 7.72 game client uses the classic protocol with account number and password, and does not natively support 2FA tokens.</p>
+	<p>For your security, always use strong passwords and keep your Recovery Key in a safe place.</p>
 </div>
 <?php
 include 'layout/overall/footer.php';
