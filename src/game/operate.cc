@@ -2013,21 +2013,31 @@ void Look(uint32 CreatureID, Object Obj){
 						RemainingUses, (RemainingUses != 1 ? "s" : ""));
 				strcat(Description, Help);
 			}else if(ObjType.getFlag(EXPIRE) || ObjType.getFlag(EXPIRESTOP)){
-				uint32 SecondsLeft;
-				if(ObjType.getFlag(EXPIRE)){
-					SecondsLeft = CronInfo(Obj, false);
-				}else{
-					SecondsLeft = Obj.getAttribute(SAVEDEXPIRETIME);
-				}
+				int BodyPos = (int)ObjType.getAttribute(BODYPOSITION);
+				int CurPos = GetObjectBodyPosition(Obj);
+				bool IsRingOrAmulet = (BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK
+						|| CurPos == INVENTORY_FINGER || CurPos == INVENTORY_NECK);
 
-				uint32 MinutesLeft = (SecondsLeft + 59) / 60;
-				if(MinutesLeft == 0){
-					snprintf(Help, sizeof(Help), " that is brand-new");
+				if(!RemoveWeaponCharges && IsRingOrAmulet){
+					snprintf(Help, sizeof(Help), " that has unlimited energy");
+					strcat(Description, Help);
 				}else{
-					snprintf(Help, sizeof(Help), " that has energy for %u minute%s left",
-							MinutesLeft, (MinutesLeft != 1 ? "s" : ""));
+					uint32 SecondsLeft;
+					if(ObjType.getFlag(EXPIRE)){
+						SecondsLeft = CronInfo(Obj, false);
+					}else{
+						SecondsLeft = Obj.getAttribute(SAVEDEXPIRETIME);
+					}
+
+					uint32 MinutesLeft = (SecondsLeft + 59) / 60;
+					if(MinutesLeft == 0){
+						snprintf(Help, sizeof(Help), " that is brand-new");
+					}else{
+						snprintf(Help, sizeof(Help), " that has energy for %u minute%s left",
+								MinutesLeft, (MinutesLeft != 1 ? "s" : ""));
+					}
+					strcat(Description, Help);
 				}
-				strcat(Description, Help);
 			}else{
 				error("Look: Objekt %d hat Flag SHOWDETAIL, aber weder WEAROUT noch EXPIRE.\n", ObjType.TypeID);
 			}
@@ -2791,6 +2801,20 @@ void ProcessCronSystem(void){
 
 		try{
 			ObjectType ObjType = Obj.getObjectType();
+			if(!RemoveWeaponCharges){
+				int BodyPos = (int)ObjType.getAttribute(BODYPOSITION);
+				int CurPos = GetObjectBodyPosition(Obj);
+				if(BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK
+						|| CurPos == INVENTORY_FINGER || CurPos == INVENTORY_NECK){
+					uint32 TotalTime = ObjType.getAttribute(TOTALEXPIRETIME);
+					if(TotalTime == 0){
+						TotalTime = 3600;
+					}
+					CronExpire(Obj, TotalTime);
+					continue;
+				}
+			}
+
 			ObjectType ExpireTarget = (int)ObjType.getAttribute(EXPIRETARGET);
 			if(ObjType.getFlag(CONTAINER)){
 				int Remainder = 0;

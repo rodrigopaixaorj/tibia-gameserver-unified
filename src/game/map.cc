@@ -3,6 +3,7 @@
 #include "config.hh"
 #include "enums.hh"
 #include "houses.hh"
+#include "info.hh"
 #include "script.hh"
 #include <filesystem>
 #include <chrono>
@@ -280,6 +281,15 @@ void CronExpire(Object Obj, int Delay){
 
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType.getFlag(EXPIRE)){
+		if(!RemoveWeaponCharges){
+			int BodyPos = (int)ObjType.getAttribute(BODYPOSITION);
+			int CurPos = GetObjectBodyPosition(Obj);
+			if(BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK
+					|| CurPos == INVENTORY_FINGER || CurPos == INVENTORY_NECK){
+				return;
+			}
+		}
+
 		if(Delay == -1){
 			CronSet(Obj, ObjType.getAttribute(TOTALEXPIRETIME));
 		}else{
@@ -2006,6 +2016,12 @@ void ChangeObject(Object Obj, ObjectType NewType){
 	}
 
 	if(NewType.getFlag(EXPIRESTOP)){
+		if(!RemoveWeaponCharges){
+			int BodyPos = (int)NewType.getAttribute(BODYPOSITION);
+			if(BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK){
+				SavedExpireTime = NewType.getAttribute(TOTALEXPIRETIME);
+			}
+		}
 		Obj.setAttribute(SAVEDEXPIRETIME, SavedExpireTime);
 	}
 
