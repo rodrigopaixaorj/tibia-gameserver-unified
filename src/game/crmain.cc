@@ -945,6 +945,30 @@ void TCreature::AttackStimulus(uint32 AttackerID){
 
 // Creature Management
 // =============================================================================
+bool CanPlayerSeeCreature(TPlayer *Observer, TCreature *Creature){
+	if(Creature == NULL){
+		return false;
+	}
+
+	if(Observer == NULL || Observer == Creature){
+		return true;
+	}
+
+	if(Creature->Type == PLAYER){
+		TPlayer *TargetPlayer = (TPlayer*)Creature;
+		if(TargetPlayer->GhostMode){
+			bool HasAccess = CheckRight(Observer->ID, GAMEMASTER_OUTFIT)
+			              || CheckRight(Observer->ID, NO_STATISTICS)
+			              || CheckRight(Observer->ID, READ_GAMEMASTER_CHANNEL);
+			if(!HasAccess){
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 bool IsCreaturePlayer(uint32 CreatureID){
 	return CreatureID < 0x40000000;
 }

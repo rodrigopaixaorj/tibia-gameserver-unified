@@ -1,6 +1,7 @@
 #include "map.hh"
 #include "containers.hh"
 #include "config.hh"
+#include "cr.hh"
 #include "enums.hh"
 #include "houses.hh"
 #include "info.hh"
@@ -2463,6 +2464,14 @@ bool CoordinateFlag(int x, int y, int z, FLAG Flag){
 	bool Result = false;
 	Object Obj = GetFirstObject(x, y, z);
 	while(Obj != NONE){
+		if(Obj.getObjectType().isCreatureContainer()){
+			TCreature *Cr = GetCreature(Obj);
+			if(Cr != NULL && Cr->Type == PLAYER && ((TPlayer*)Cr)->GhostMode){
+				Obj = Obj.getNextObject();
+				continue;
+			}
+		}
+
 		if(Obj.getObjectType().getFlag(Flag)){
 			Result = true;
 			break;

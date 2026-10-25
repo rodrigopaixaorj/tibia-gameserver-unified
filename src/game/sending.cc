@@ -218,6 +218,11 @@ void SendMapObject(TConnection *Connection, Object Obj){
 		return;
 	}
 
+	TPlayer *Observer = Connection->GetPlayer();
+	if(!CanPlayerSeeCreature(Observer, Creature)){
+		return;
+	}
+
 	KNOWNCREATURESTATE KnownState = Connection->KnownCreature(Creature->ID, true);
 	if(KnownState == KNOWNCREATURE_UPTODATE){
 		SendWord(Connection, 99);
@@ -608,6 +613,14 @@ void SendAddField(TConnection *Connection, int x, int y, int z, Object Obj){
 		return;
 	}
 
+	if(Obj.getObjectType().isCreatureContainer()){
+		TCreature *Creature = GetCreature(Obj);
+		TPlayer *Observer = Connection->GetPlayer();
+		if(!CanPlayerSeeCreature(Observer, Creature)){
+			return;
+		}
+	}
+
 	SendByte(Connection, SV_CMD_ADD_FIELD);
 	SendWord(Connection, (uint16)x);
 	SendWord(Connection, (uint16)y);
@@ -624,6 +637,14 @@ void SendChangeField(TConnection *Connection, int x, int y, int z, Object Obj){
 	if(!Obj.exists()){
 		error("SendChangeField: Übergebenes Objekt existiert nicht.\n");
 		return;
+	}
+
+	if(Obj.getObjectType().isCreatureContainer()){
+		TCreature *Creature = GetCreature(Obj);
+		TPlayer *Observer = Connection->GetPlayer();
+		if(!CanPlayerSeeCreature(Observer, Creature)){
+			return;
+		}
 	}
 
 	int ObjIndex = GetObjectRNum(Obj);
@@ -668,6 +689,11 @@ void SendMoveCreature(TConnection *Connection,
 	TCreature *Creature = GetCreature(CreatureID);
 	if(Creature == NULL){
 		error("SendMoveCreature: Kreatur existiert nicht.\n");
+		return;
+	}
+
+	TPlayer *Observer = Connection->GetPlayer();
+	if(!CanPlayerSeeCreature(Observer, Creature)){
 		return;
 	}
 

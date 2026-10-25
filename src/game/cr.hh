@@ -929,6 +929,7 @@ struct TPlayer: TCreature {
 	int NumberOfMutings;
 	uint32 Addressees[20];
 	uint32 AddresseesTimes[20];
+	bool GhostMode;
 };
 
 // crmain.cc
@@ -937,6 +938,7 @@ struct TPlayer: TCreature {
 extern TRaceData RaceData[MAX_RACES];
 extern priority_queue<uint32, uint32> ToDoQueue;
 
+bool CanPlayerSeeCreature(TPlayer *Observer, TCreature *Creature);
 bool IsCreaturePlayer(uint32 CreatureID);
 TCreature *GetCreature(uint32 CreatureID);
 TCreature *GetCreature(Object Obj);

@@ -2473,7 +2473,7 @@ void TMonster::IdleStimulus(void){
 				int DistanceX = std::abs(Target->posx - this->posx);
 				int DistanceY = std::abs(Target->posy - this->posy);
 				if((Target->posz != this->posz || DistanceX > 10 || DistanceY > 10)
-						|| (Target->Type == PLAYER && CheckRight(Target->ID, IGNORED_BY_MONSTERS))
+						|| (Target->Type == PLAYER && (CheckRight(Target->ID, IGNORED_BY_MONSTERS) || ((TPlayer*)Target)->GhostMode))
 						|| (Target->IsInvisible() && !RaceData[this->Race].SeeInvisible)
 						|| IsProtectionZone(Target->posx, Target->posy, Target->posz)
 						|| IsHouse(Target->posx, Target->posy, Target->posz)

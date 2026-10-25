@@ -75,6 +75,11 @@ void AnnounceChangedCreature(uint32 CreatureID, int Type){
 		}
 
 		if(KnowingConnection->IsVisible(Creature->posx, Creature->posy, Creature->posz)){
+			TPlayer *Observer = KnowingConnection->GetPlayer();
+			if(!CanPlayerSeeCreature(Observer, Creature)){
+				continue;
+			}
+
 			switch(Type){
 				case CREATURE_HEALTH_CHANGED: SendCreatureHealth(KnowingConnection, CreatureID); break;
 				case CREATURE_LIGHT_CHANGED:  SendCreatureLight(KnowingConnection, CreatureID); break;

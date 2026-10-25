@@ -58,6 +58,7 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->TalkBufferFullTime = 0;
 	this->MutingEndRound = 0;
 	this->NumberOfMutings = 0;
+	this->GhostMode = false;
 
 	memset(this->Rights, 0, sizeof(this->Rights));
 
@@ -1857,14 +1858,14 @@ int IdentifyPlayer(const char *Name, bool ExactMatch, bool IgnoreGamemasters, TP
 	for(int Index = 0; Index < FirstFreePlayer; Index += 1){
 		TPlayer *Player = *PlayerList.at(Index);
 		if(stricmp(Player->Name, Name, NameLength) == 0){
+			if(IgnoreGamemasters && (CheckRight(Player->ID, NO_STATISTICS) || Player->GhostMode)){
+				continue;
+			}
+
 			if(NameLength == (int)strlen(Player->Name)){
 				*OutPlayer = Player;
 				return 0; // FOUND ?
 			}else if(!ExactMatch){
-				if(IgnoreGamemasters && CheckRight(Player->ID, NO_STATISTICS)){
-					continue;
-				}
-
 				*OutPlayer = Player;
 				Hits += 1;
 			}
