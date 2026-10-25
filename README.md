@@ -65,6 +65,7 @@ This project unifies the **Game Server**, **Login Server**, and a **Flexible Tri
   * Interactive offline HTML reference guide available at `docs/gm_commands_guide.html`.
   * Step-based forward relative teleportation (`alani <steps>`).
   * Teleportation to named monsters and NPCs (`alani sio "<creature>"`).
+  * Gamemaster invisibility toggle (`alana vid` / ghost mode).
   * Unquoted multi-word item spawning support for `alevo`.
   * Progression protection preventing GameMasters from accidentally gaining experience or advancing skill levels.
 
@@ -464,6 +465,7 @@ Key commands available for GameMaster accounts (Access Level >= 3):
   * `alani <steps>` – Teleport forward relative to current facing direction.
   * `alani "<player>"` – Teleport to target player.
   * `alani sio "<creature>"` – Teleport directly to a monster or NPC by name.
+  * `alana vid` – Toggle Gamemaster invisibility mode (permanent until toggled off).
   * `aleta sio "<player>"` – Teleport target player to your position.
   * `aleta bar` – Teleport to temple of your hometown.
 * **Items & Spawning:**

@@ -2517,6 +2517,36 @@ void CancelInvisibility(TCreature *Actor, Object Target, int ManaPoints, int Sou
 	}
 }
 
+void GamemasterInvisibility(TCreature *Actor){
+	if(Actor == NULL){
+		error("GamemasterInvisibility: Ungültige Kreatur übergeben.\n");
+		throw ERROR;
+	}
+
+	if(Actor->Type != PLAYER){
+		error("GamemasterInvisibility: Zauberspruch kann nur von Spielern angewendet werden.\n");
+		throw ERROR;
+	}
+
+	if(!CheckRight(Actor->ID, GAMEMASTER_OUTFIT) && !CheckRight(Actor->ID, NO_STATISTICS)){
+		return;
+	}
+
+	if(Actor->IsInvisible()){
+		Actor->Outfit = Actor->OrgOutfit;
+		Actor->SetTimer(SKILL_ILLUSION, 0, 0, 0, -1);
+		SendMessage(Actor->Connection, TALK_INFO_MESSAGE, "You are visible again.");
+		GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_POFF);
+	}else{
+		Actor->Outfit = TOutfit::Invisible();
+		Actor->SetTimer(SKILL_ILLUSION, 0, 0, 0, -1);
+		SendMessage(Actor->Connection, TALK_INFO_MESSAGE, "You are now invisible.");
+		GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_MAGIC_BLUE);
+	}
+
+	AnnounceChangedCreature(Actor->ID, CREATURE_OUTFIT_CHANGED);
+}
+
 void CreatureIllusion(TCreature *Actor, int ManaPoints, int SoulPoints, const char *RaceName, int Duration){
 	if(Actor == NULL){
 		error("CreatureIllusion: Ungültige Kreatur übergeben.\n");
@@ -3424,6 +3454,7 @@ static void CharacterRightSpell(uint32 CreatureID, int SpellNr, const char (*Spe
 		case 100: ClearQuestValues(Actor); 							break;
 		case 101: KillAllMonsters(Actor, EFFECT_DEATH, 2); 			break;
 		case 102: StartMonsterraid(Actor, SpellStr[4]); 			break;
+		case 103: GamemasterInvisibility(Actor); 					break;
 	}
 }
 
@@ -5373,6 +5404,12 @@ static void InitSpells(void){
 	Spell->Level = 0;
 	Spell->Flags = 0;
 	Spell->Comment = "Start Monsterraid";
+
+	Spell = CreateSpell(103, "al", "ana", "vid", "");
+	Spell->Mana = 0;
+	Spell->Level = 0;
+	Spell->Flags = 0;
+	Spell->Comment = "Gamemaster Invisibility";
 }
 
 void InitMagic(void){

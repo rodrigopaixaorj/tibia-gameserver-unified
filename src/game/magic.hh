@@ -176,6 +176,7 @@ void NegatePoison(TCreature *Actor, TCreature *Target, int ManaPoints, int SoulP
 void Enlight(TCreature *Actor, int ManaPoints, int SoulPoints, int Radius, int Duration);
 void Invisibility(TCreature *Actor, int ManaPoints, int SoulPoints, int Duration);
 void CancelInvisibility(TCreature *Actor, Object Target, int ManaPoints, int SoulPoints, int Radius);
+void GamemasterInvisibility(TCreature *Actor);
 void CreatureIllusion(TCreature *Actor, int ManaPoints, int SoulPoints, const char *RaceName, int Duration);
 void ObjectIllusion(TCreature *Actor, int ManaPoints, int SoulPoints, Object Target, int Duration);
 void ChangeData(TCreature *Actor, const char *Param);
