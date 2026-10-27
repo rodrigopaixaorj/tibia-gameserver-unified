@@ -433,7 +433,7 @@ void SendRights(TConnection *Connection){
 	SendByte(Connection, SV_CMD_RIGHTS);
 
 	// NOTE(fusion): See `CheckBanishmentRight`.
-	bool Count = 0;
+	int Count = 0;
 	for(int Reason = 0; Reason <= 31; Reason += 1){
 		uint8 Actions = 0;
 		if(CheckRight(Connection->CharacterID, (RIGHT)(Reason + 18))){
