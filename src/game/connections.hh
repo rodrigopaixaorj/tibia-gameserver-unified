@@ -226,6 +226,8 @@ struct TConnection {
 	bool IsCastSpectator;
 	uint32 CastingPlayerID;
 	bool SuppressCastBroadcast;
+	int64 LastCastSwitchMs;
+	int64 LastCastMessageMs;
 	TKnownCreature KnownCreatureTable[150];
 };
 

@@ -1764,9 +1764,27 @@ void ReceiveData(TConnection *Connection){
 				if(Text[0] != 0 && Connection->CastingPlayerID != 0){
 					TPlayer *Caster = ::GetPlayer(Connection->CastingPlayerID);
 					if(Caster != NULL){
+						int64 now = GetClockMonotonicMS();
+						constexpr int64 ChatCooldownMs = 2500;
+						if(now - Connection->LastCastMessageMs < ChatCooldownMs){
+							int remainingSecs = (int)((ChatCooldownMs - (now - Connection->LastCastMessageMs) + 999) / 1000);
+							SendMessage(Connection, TALK_FAILURE_MESSAGE, "You need to wait %d second%s to speak again.",
+								remainingSecs, remainingSecs == 1 ? "" : "s");
+							return;
+						}
+						Connection->LastCastMessageMs = now;
+
+						char SpecTag[64] = "Spectator";
+						for(size_t s = 0; s < Caster->Spectators.size(); ++s){
+							if(Caster->Spectators[s] == Connection){
+								snprintf(SpecTag, sizeof(SpecTag), "Spectator [%zu]", s + 1);
+								break;
+							}
+						}
+
 						if(Caster->Connection != NULL){
 							Caster->Connection->SuppressCastBroadcast = true;
-							SendMessage(Caster->Connection, TALK_LOGIN_MESSAGE, "[Cast] Spectator: %s", Text);
+							SendMessage(Caster->Connection, TALK_LOGIN_MESSAGE, "[Cast] %s: %s", SpecTag, Text);
 							Caster->Connection->SuppressCastBroadcast = false;
 						}
 						for(size_t s = 0; s < Caster->Spectators.size(); ++s){
@@ -1775,7 +1793,7 @@ void ReceiveData(TConnection *Connection){
 								if(Spec == Connection){
 									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[You -> Cast]: %s", Text);
 								}else{
-									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[Cast] Spectator: %s", Text);
+									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[Cast] %s: %s", SpecTag, Text);
 								}
 							}
 						}

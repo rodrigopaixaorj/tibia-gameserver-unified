@@ -27,6 +27,8 @@ TConnection::TConnection(void){
 	this->IsCastSpectator = false;
 	this->CastingPlayerID = 0;
 	this->SuppressCastBroadcast = false;
+	this->LastCastSwitchMs = 0;
+	this->LastCastMessageMs = 0;
 }
 
 void TConnection::Process(void){
@@ -184,6 +186,8 @@ void TConnection::Free(void){
 	this->IsCastSpectator = false;
 	this->CastingPlayerID = 0;
 	this->SuppressCastBroadcast = false;
+	this->LastCastSwitchMs = 0;
+	this->LastCastMessageMs = 0;
 	this->State = CONNECTION_FREE;
 }
 
@@ -198,6 +202,8 @@ void TConnection::Assign(void){
 	this->IsCastSpectator = false;
 	this->CastingPlayerID = 0;
 	this->SuppressCastBroadcast = false;
+	this->LastCastSwitchMs = 0;
+	this->LastCastMessageMs = 0;
 }
 
 void TConnection::Connect(int Socket){
@@ -735,12 +741,24 @@ void TConnection::SwitchCast(int Direction){
 		return;
 	}
 
+	int64 now = GetClockMonotonicMS();
+	constexpr int64 SwitchCooldownMs = 1500;
+	if(now - this->LastCastSwitchMs < SwitchCooldownMs){
+		int remainingSecs = (int)((SwitchCooldownMs - (now - this->LastCastSwitchMs) + 999) / 1000);
+		SendMessage(this, TALK_FAILURE_MESSAGE, "Please wait %d second%s before switching casts again.",
+			remainingSecs, remainingSecs == 1 ? "" : "s");
+		SendSnapback(this);
+		return;
+	}
+
 	std::vector<TPlayer*> casters = GetActiveCasters();
 	if(casters.size() <= 1 && this->CastingPlayerID != 0){
 		SendSnapback(this);
 		SendMessage(this, TALK_LOGIN_MESSAGE, "There are no other active broadcasts to switch to.");
 		return;
 	}
+
+	this->LastCastSwitchMs = now;
 
 	std::sort(casters.begin(), casters.end(), [](TPlayer *a, TPlayer *b){
 		return strcmp(a->Name, b->Name) < 0;

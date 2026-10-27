@@ -488,10 +488,11 @@ Broadcasters manage their stream directly in-game using the following console co
 ### Spectator Features & Controls
 
 * **Connecting:** Spectators log in through the standard Tibia client login screen. Active broadcasts are listed in the character selection window showing the streamer's name, description, and viewer count. If a cast has a password, enter it in the client password field.
-* **Instant Stream Zapping:** Spectators can seamlessly switch between active live casts on the fly using **`Ctrl + Arrow Keys`** (North, South, East, West) without logging out.
-* **Live In-Game Chat:** Spectators can chat in the Default console:
-  * Broadcaster and fellow viewers see: `[Cast] Spectator: <message>`.
+* **Instant Stream Zapping:** Spectators can seamlessly switch between active live casts on the fly using **`Ctrl + Arrow Keys`** (North, South, East, West) without logging out. Includes a built-in 1.5-second exhaust protection to prevent packet flooding (`"Please wait X second(s) before switching casts again."`).
+* **Live In-Game Chat & Anti-Spam:** Spectators can chat in the Default console:
+  * Broadcaster and fellow viewers see: `[Cast] Spectator [N]: <message>`.
   * The sending spectator sees: `[You -> Cast]: <message>`.
+  * Built-in anti-spam protection prevents message flooding with countdown warning (`"You need to wait X second(s) to speak again."`).
 * **Zero Duplication & Privacy:** Broadcaster private command responses, server status feedback, and global broadcasts/raids are intelligently filtered to ensure a clean, duplicate-free console experience for spectators.
 * **Equipment & Backpack Synchronization:** Spectators automatically see the caster's full inventory equipment and currently open backpacks in real time.
 
