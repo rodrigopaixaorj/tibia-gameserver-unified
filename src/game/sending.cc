@@ -95,7 +95,7 @@ void FinishSendData(TConnection *Connection){
 	}
 
 	int ChunkSize = Connection->NextToWrite - Connection->NextToCommit;
-	if(ChunkSize > 0 && Connection->InGame() && !Connection->IsCastSpectator){
+	if(ChunkSize > 0 && Connection->InGame() && !Connection->IsCastSpectator && !Connection->SuppressCastBroadcast){
 		TPlayer *Player = Connection->GetPlayer();
 		if(Player != NULL && Player->IsCasting && !Player->Spectators.empty()){
 			constexpr int OutDataCap = (int)sizeof(Connection->OutData);
@@ -1796,7 +1796,7 @@ void BroadcastMessage(int Mode, const char *Text, ...){
 
 	TConnection *Connection = GetFirstConnection();
 	while(Connection != NULL){
-		if(Connection->Live()){
+		if(Connection->Live() && !Connection->IsCastSpectator){
 			SendMessage(Connection, Mode, "%s", Message);
 		}
 		Connection = GetNextConnection();

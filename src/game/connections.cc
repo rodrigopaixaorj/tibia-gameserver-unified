@@ -26,6 +26,7 @@ TConnection::TConnection(void){
 	this->State = CONNECTION_FREE;
 	this->IsCastSpectator = false;
 	this->CastingPlayerID = 0;
+	this->SuppressCastBroadcast = false;
 }
 
 void TConnection::Process(void){
@@ -182,6 +183,7 @@ void TConnection::Free(void){
 	}
 	this->IsCastSpectator = false;
 	this->CastingPlayerID = 0;
+	this->SuppressCastBroadcast = false;
 	this->State = CONNECTION_FREE;
 }
 
@@ -195,6 +197,7 @@ void TConnection::Assign(void){
 	this->LoginTimer = 0;
 	this->IsCastSpectator = false;
 	this->CastingPlayerID = 0;
+	this->SuppressCastBroadcast = false;
 }
 
 void TConnection::Connect(int Socket){
@@ -274,6 +277,13 @@ bool TConnection::JoinGame(TReadBuffer *Buffer){
 		SendInitGame(this, Caster->ID);
 		SendRights(this);
 		SendFullScreen(this);
+		SendBodyInventory(this, Caster->ID);
+		for(int c = 0; c < 16; ++c){
+			Object Con = Caster->GetOpenContainer(c);
+			if(Con != NONE && Con.exists()){
+				SendContainer(this, c);
+			}
+		}
 		SendAmbiente(this);
 		SendPlayerData(this);
 		SendPlayerSkills(this);
@@ -777,6 +787,13 @@ void TConnection::SwitchCast(int Direction){
 		SendInitGame(this, NewCaster->ID);
 		SendRights(this);
 		SendFullScreen(this);
+		SendBodyInventory(this, NewCaster->ID);
+		for(int c = 0; c < 16; ++c){
+			Object Con = NewCaster->GetOpenContainer(c);
+			if(Con != NONE && Con.exists()){
+				SendContainer(this, c);
+			}
+		}
 		SendAmbiente(this);
 		SendPlayerData(this);
 		SendPlayerSkills(this);

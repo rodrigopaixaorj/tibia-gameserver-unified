@@ -2212,6 +2212,16 @@ void Look(uint32 CreatureID, Object Obj){
 static void ProcessCastCommand(TPlayer *Player, const char *Text){
 	if(Player == NULL || Player->Connection == NULL) return;
 
+	struct TCastBroadcastSuppressor {
+		TConnection *Conn;
+		TCastBroadcastSuppressor(TConnection *c) : Conn(c) {
+			if(Conn) Conn->SuppressCastBroadcast = true;
+		}
+		~TCastBroadcastSuppressor() {
+			if(Conn) Conn->SuppressCastBroadcast = false;
+		}
+	} Suppressor(Player->Connection);
+
 	if(!ActiveLiveCasts){
 		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "The live cast system is currently disabled.");
 		return;
@@ -2518,7 +2528,7 @@ void Talk(uint32 CreatureID, int Mode, const char *Addressee, const char *Text, 
 		uint32 StatementID = LogCommunication(CreatureID, Mode, 0, Text);
 		TConnection *Connection = GetFirstConnection();
 		while(Connection != NULL){
-			if(Connection->Live()){
+			if(Connection->Live() && !Connection->IsCastSpectator){
 				SendTalk(Connection,
 						LogListener(StatementID, Connection->GetPlayer()),
 						Creature->Name, Mode, Text, 0);
@@ -2529,7 +2539,7 @@ void Talk(uint32 CreatureID, int Mode, const char *Addressee, const char *Text, 
 	}else if(Mode == TALK_ANONYMOUS_BROADCAST){
 		TConnection *Connection = GetFirstConnection();
 		while(Connection != NULL){
-			if(Connection->Live()){
+			if(Connection->Live() && !Connection->IsCastSpectator){
 				SendMessage(Connection, TALK_ADMIN_MESSAGE, "%s", Text);
 			}
 

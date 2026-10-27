@@ -1765,7 +1765,9 @@ void ReceiveData(TConnection *Connection){
 					TPlayer *Caster = ::GetPlayer(Connection->CastingPlayerID);
 					if(Caster != NULL){
 						if(Caster->Connection != NULL){
+							Caster->Connection->SuppressCastBroadcast = true;
 							SendMessage(Caster->Connection, TALK_LOGIN_MESSAGE, "[Cast] Spectator: %s", Text);
+							Caster->Connection->SuppressCastBroadcast = false;
 						}
 						for(size_t s = 0; s < Caster->Spectators.size(); ++s){
 							TConnection *Spec = Caster->Spectators[s];

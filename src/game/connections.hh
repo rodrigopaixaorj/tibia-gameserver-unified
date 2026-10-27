@@ -225,6 +225,7 @@ struct TConnection {
 	char Name[31];
 	bool IsCastSpectator;
 	uint32 CastingPlayerID;
+	bool SuppressCastBroadcast;
 	TKnownCreature KnownCreatureTable[150];
 };
 
