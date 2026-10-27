@@ -38,6 +38,13 @@ This project unifies the **Game Server**, **Login Server**, and a **Flexible Tri
   * Live telemetry reporting uptime, online count, peak players, monsters, NPCs, server location, URL, MOTD, and gameplay rates.
   * Compatible with Otservlist.org, otsv.me, and custom web AAC status widgets.
 
+* **Native Live Cast System:**
+  * In-process real-time gameplay streaming directly from the server engine without proxy tools or custom DLLs.
+  * Real-time packet replication with full equipment slot mirroring, opened container synchronization, and smooth visual reproduction.
+  * Interactive in-game Cast Chat in the Default console with sender separation and smart broadcast suppression.
+  * Instant stream zapping via `Ctrl + Arrow Keys` directly in the standard Tibia client.
+  * Full privacy controls: password-protected casts, stream descriptions, and spectator capacity limits.
+
 * **Tibia Data Studio (Web Management Suite):**
   * Integrated web application built with Python/Flask and a sleek, responsive dark mode interface.
   * **Interactive 2D Map Visualizer:** Real-time sector rendering (`.sec` & `.map`), floor navigation (Z: 0 to 15 / +7 to -7), minimap overview, zoom, and coordinate inspection.
@@ -452,6 +459,41 @@ The server is configured via `config.cfg` in the root directory. All parameters 
 | `soul_regen_interval` | `120` | Seconds to regenerate 1 Soul Point (`soul_regen_interval_promoted = 15`). |
 | `house_buy_level` | `1` | Minimum character level required to buy a house. |
 | `house_only_premium` | `true` | Restrict house ownership to premium accounts. |
+
+### 9. Live Cast System
+| Parameter | Default | Description |
+| :--- | :---: | :--- |
+| `live_cast_enabled` | `true` | Master toggle to enable or disable the in-game live cast streaming system. |
+| `live_cast_max_spectators` | `50` | Maximum simultaneous spectators allowed per live cast stream. |
+
+---
+
+## Native Live Cast System
+
+The server engine includes a fully native, zero-latency **Live Cast System** that allows players to broadcast their gameplay to any number of spectators directly inside standard 7.72 Tibia clients (including classic client and OTClient) without requiring external proxies or modified executables.
+
+### Broadcaster In-Game Commands
+
+Broadcasters manage their stream directly in-game using the following console commands:
+
+| Command | Description |
+| :--- | :--- |
+| `!cast on` | Starts broadcasting your gameplay to spectators. |
+| `!cast off` | Stops your active live cast stream. |
+| `!cast password <secret>` | Sets a password required for spectators to tune in. |
+| `!cast password off` | Removes password protection, making the stream public. |
+| `!cast desc <description>` | Sets a custom title or description for your broadcast. |
+| `!cast viewers` / `!cast status` | Displays the current spectator count and maximum limit. |
+
+### Spectator Features & Controls
+
+* **Connecting:** Spectators log in through the standard Tibia client login screen. Active broadcasts are listed in the character selection window showing the streamer's name, description, and viewer count. If a cast has a password, enter it in the client password field.
+* **Instant Stream Zapping:** Spectators can seamlessly switch between active live casts on the fly using **`Ctrl + Arrow Keys`** (North, South, East, West) without logging out.
+* **Live In-Game Chat:** Spectators can chat in the Default console:
+  * Broadcaster and fellow viewers see: `[Cast] Spectator: <message>`.
+  * The sending spectator sees: `[You -> Cast]: <message>`.
+* **Zero Duplication & Privacy:** Broadcaster private command responses, server status feedback, and global broadcasts/raids are intelligently filtered to ensure a clean, duplicate-free console experience for spectators.
+* **Equipment & Backpack Synchronization:** Spectators automatically see the caster's full inventory equipment and currently open backpacks in real time.
 
 ---
 
