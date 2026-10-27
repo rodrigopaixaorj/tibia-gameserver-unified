@@ -11,6 +11,16 @@ bool CommandAllowed(TConnection *Connection, int Command){
 		return false;
 	}
 
+	if(Connection->IsCastSpectator){
+		return Command == CL_CMD_LOGOUT
+			|| Command == CL_CMD_PING
+			|| (Command >= CL_CMD_GO_PATH && Command <= CL_CMD_ROTATE_WEST)
+			|| Command == CL_CMD_ATTACK
+			|| Command == CL_CMD_FOLLOW
+			|| Command == CL_CMD_CANCEL
+			|| Command == CL_CMD_TALK;
+	}
+
 	if(Connection->State == CONNECTION_GAME){
 		return Command != CL_CMD_LOGIN_REQUEST
 			&& Command != CL_CMD_LOGIN;
@@ -1722,6 +1732,59 @@ void ReceiveData(TConnection *Connection){
 	}
 
 	Connection->ResetTimer(Command);
+
+	if(Connection->IsCastSpectator){
+		if(Command == CL_CMD_LOGOUT){
+			Connection->Logout(0, true);
+			return;
+		}else if(Command == CL_CMD_PING){
+			SendPing(Connection);
+			return;
+		}else if(Command >= CL_CMD_ROTATE_NORTH && Command <= CL_CMD_ROTATE_WEST){
+			Connection->SwitchCast(Command);
+			return;
+		}else if(Command >= CL_CMD_GO_PATH && Command <= CL_CMD_GO_NORTHWEST){
+			SendSnapback(Connection);
+			return;
+		}else if(Command == CL_CMD_ATTACK || Command == CL_CMD_FOLLOW || Command == CL_CMD_CANCEL){
+			SendClearTarget(Connection);
+			return;
+		}else if(Command == CL_CMD_TALK){
+			try{
+				uint8 Mode = Buffer.readByte();
+				char Addressee[30] = {};
+				if(Mode == TALK_PRIVATE_MESSAGE || Mode == TALK_GAMEMASTER_MESSAGE || Mode == TALK_ANONYMOUS_MESSAGE){
+					Buffer.readString(Addressee, sizeof(Addressee));
+				}
+				if(Mode == TALK_CHANNEL_CALL || Mode == TALK_GAMEMASTER_CHANNELCALL || Mode == TALK_ANONYMOUS_CHANNELCALL){
+					Buffer.readWord();
+				}
+				char Text[256] = {};
+				Buffer.readString(Text, sizeof(Text));
+				if(Text[0] != 0 && Connection->CastingPlayerID != 0){
+					TPlayer *Caster = ::GetPlayer(Connection->CastingPlayerID);
+					if(Caster != NULL){
+						if(Caster->Connection != NULL){
+							SendMessage(Caster->Connection, TALK_LOGIN_MESSAGE, "[Cast] Spectator: %s", Text);
+						}
+						for(size_t s = 0; s < Caster->Spectators.size(); ++s){
+							TConnection *Spec = Caster->Spectators[s];
+							if(Spec != NULL && Spec->InGame()){
+								if(Spec == Connection){
+									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[You -> Cast]: %s", Text);
+								}else{
+									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[Cast] Spectator: %s", Text);
+								}
+							}
+						}
+					}
+				}
+			}catch(...){}
+			return;
+		}
+		return;
+	}
+
 	try{
 		switch(Command){
 			case CL_CMD_LOGOUT:					CQuitGame(Connection, &Buffer); break;

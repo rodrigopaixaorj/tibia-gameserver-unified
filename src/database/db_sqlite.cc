@@ -635,6 +635,13 @@ public:
 				sqlite3_step(stmt);
 				sqlite3_finalize(stmt);
 			}
+		}else{
+			const char *delSql = "DELETE FROM PlayerInventory WHERE CharacterID = ?1;";
+			if(sqlite3_prepare_v2(m_DB, delSql, -1, &stmt, nullptr) == SQLITE_OK){
+				sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+				sqlite3_step(stmt);
+				sqlite3_finalize(stmt);
+			}
 		}
 
 		// 4. Save PlayerDepots

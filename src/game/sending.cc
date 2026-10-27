@@ -52,6 +52,32 @@ bool BeginSendData(TConnection *Connection){
 	return Result;
 }
 
+void BroadcastChunkToSpectator(TConnection *SpecConn, const uint8 *ChunkData, int ChunkSize){
+	if(SpecConn == NULL || !SpecConn->Live() || SpecConn->State == CONNECTION_LOGIN){
+		return;
+	}
+
+	int OutDataCommitted = (SpecConn->NextToCommit - SpecConn->NextToSend);
+	int OutDataCapacity = (int)sizeof(SpecConn->OutData);
+	if((OutDataCommitted + ChunkSize) >= OutDataCapacity){
+		SpecConn->Overflow = true;
+		return;
+	}
+
+	SpecConn->NextToWrite = SpecConn->NextToCommit;
+	for(int i = 0; i < ChunkSize; ++i){
+		SpecConn->OutData[SpecConn->NextToWrite % OutDataCapacity] = ChunkData[i];
+		SpecConn->NextToWrite += 1;
+	}
+	SpecConn->NextToCommit = SpecConn->NextToWrite;
+
+	if(!SpecConn->WillingToSend){
+		SpecConn->WillingToSend = true;
+		SpecConn->NextSendingConnection = FirstSendingConnection;
+		FirstSendingConnection = SpecConn;
+	}
+}
+
 void FinishSendData(TConnection *Connection){
 	if(Connection == NULL){
 		error("FinishSendData: Verbindung ist NULL.\n");
@@ -66,6 +92,21 @@ void FinishSendData(TConnection *Connection){
 	if(Connection->Overflow){
 		print(2, "FinishSendData: Puffer ist voll. Paket wird nicht versandt.\n");
 		return;
+	}
+
+	int ChunkSize = Connection->NextToWrite - Connection->NextToCommit;
+	if(ChunkSize > 0 && Connection->InGame() && !Connection->IsCastSpectator){
+		TPlayer *Player = Connection->GetPlayer();
+		if(Player != NULL && Player->IsCasting && !Player->Spectators.empty()){
+			constexpr int OutDataCap = (int)sizeof(Connection->OutData);
+			uint8 TempChunk[16384];
+			if(ChunkSize <= (int)sizeof(TempChunk)){
+				for(int i = 0; i < ChunkSize; ++i){
+					TempChunk[i] = Connection->OutData[(Connection->NextToCommit + i) % OutDataCap];
+				}
+				Player->BroadcastToSpectators(TempChunk, ChunkSize);
+			}
+		}
 	}
 
 	Connection->NextToCommit = Connection->NextToWrite;

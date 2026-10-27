@@ -2209,6 +2209,77 @@ void Look(uint32 CreatureID, Object Obj){
 	}
 }
 
+static void ProcessCastCommand(TPlayer *Player, const char *Text){
+	if(Player == NULL || Player->Connection == NULL) return;
+
+	if(!ActiveLiveCasts){
+		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "The live cast system is currently disabled.");
+		return;
+	}
+
+	const char *param = Text + 5;
+	while(*param == ' ') param++;
+
+	if(param[0] == 0 || strcmp(param, "help") == 0){
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "--- Live Cast System ---");
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "!cast on - Start your live cast broadcast");
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "!cast off - Stop your live cast broadcast");
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "!cast password <password> - Set cast password");
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "!cast password off - Remove cast password");
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "!cast desc <description> - Set cast description");
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "!cast viewers - Show spectator count");
+		return;
+	}
+
+	if(strcmp(param, "on") == 0){
+		if(Player->IsCasting){
+			SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "You are already casting.");
+			return;
+		}
+		Player->IsCasting = true;
+		Player->CastPassword[0] = 0;
+		Player->CastDescription[0] = 0;
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "You have started your live cast.");
+	}else if(strcmp(param, "off") == 0){
+		if(!Player->IsCasting){
+			SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "You are not currently casting.");
+			return;
+		}
+		Player->StopCast();
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "You have stopped your live cast.");
+	}else if(strncmp(param, "password", 8) == 0){
+		const char *pass = param + 8;
+		while(*pass == ' ') pass++;
+		if(pass[0] == 0){
+			SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "Usage: !cast password <password> or !cast password off");
+			return;
+		}
+		if(strcmp(pass, "off") == 0){
+			Player->CastPassword[0] = 0;
+			SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "Cast password has been removed.");
+		}else{
+			strncpy(Player->CastPassword, pass, sizeof(Player->CastPassword) - 1);
+			Player->CastPassword[sizeof(Player->CastPassword) - 1] = 0;
+			SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "Cast password has been set to: %s", Player->CastPassword);
+		}
+	}else if(strncmp(param, "desc", 4) == 0){
+		const char *desc = param + 4;
+		while(*desc == ' ') desc++;
+		strncpy(Player->CastDescription, desc, sizeof(Player->CastDescription) - 1);
+		Player->CastDescription[sizeof(Player->CastDescription) - 1] = 0;
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "Cast description has been updated.");
+	}else if(strcmp(param, "viewers") == 0 || strcmp(param, "status") == 0){
+		if(!Player->IsCasting){
+			SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "You must start a live cast first (!cast on).");
+			return;
+		}
+		SendMessage(Player->Connection, TALK_LOGIN_MESSAGE, "Current spectators: %zu (max: %d).",
+			Player->Spectators.size(), LiveCastMaxSpectators);
+	}else{
+		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "Available commands: !cast on, !cast off, !cast password <password/off>, !cast desc <description>, !cast viewers");
+	}
+}
+
 void Talk(uint32 CreatureID, int Mode, const char *Addressee, const char *Text, bool CheckSpamming){
 	// TODO(fusion): `Text` was originally `char*`, but I wanted to improve
 	// string handling overall and modifying string parameters is a bad idea,
@@ -2252,6 +2323,11 @@ void Talk(uint32 CreatureID, int Mode, const char *Addressee, const char *Text, 
 
 	if(Creature->Type == PLAYER){
 		TPlayer *Player = (TPlayer*)Creature;
+
+		if(strncmp(Text, "!cast", 5) == 0 || strncmp(Text, "/cast", 5) == 0){
+			ProcessCastCommand(Player, Text);
+			return;
+		}
 
 		// TODO(fusion): Some `IsTalkMuteable` inlined function?
 		bool TalkMuteable = Mode == TALK_SAY

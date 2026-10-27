@@ -1268,6 +1268,18 @@ public:
 				}
 				mysql_stmt_close(stmt);
 			}
+		} else {
+			const char *delSql = "DELETE FROM PlayerInventory WHERE CharacterID = ?;";
+			stmt = mysql_stmt_init(m_MySQL);
+			if(stmt && mysql_stmt_prepare(stmt, delSql, (unsigned long)strlen(delSql)) == 0){
+				MYSQL_BIND dp[1];
+				memset(dp, 0, sizeof(dp));
+				dp[0].buffer_type = MYSQL_TYPE_LONG; dp[0].buffer = &cid; dp[0].is_unsigned = 1;
+				if(mysql_stmt_bind_param(stmt, dp) == 0){
+					mysql_stmt_execute(stmt);
+				}
+				mysql_stmt_close(stmt);
+			}
 		}
 
 		// 4. Save PlayerDepots
@@ -1285,6 +1297,20 @@ public:
 					dp[2].buffer_type = MYSQL_TYPE_BLOB; dp[2].buffer = Slot->Depot[d];
 					dp[2].buffer_length = depLen; dp[2].length = &depLen;
 
+					if(mysql_stmt_bind_param(stmt, dp) == 0){
+						mysql_stmt_execute(stmt);
+					}
+					mysql_stmt_close(stmt);
+				}
+			} else {
+				const char *delDepSql = "DELETE FROM PlayerDepots WHERE CharacterID = ? AND DepotID = ?;";
+				stmt = mysql_stmt_init(m_MySQL);
+				if(stmt && mysql_stmt_prepare(stmt, delDepSql, (unsigned long)strlen(delDepSql)) == 0){
+					MYSQL_BIND dp[2];
+					memset(dp, 0, sizeof(dp));
+					unsigned char depId = (unsigned char)d;
+					dp[0].buffer_type = MYSQL_TYPE_LONG; dp[0].buffer = &cid; dp[0].is_unsigned = 1;
+					dp[1].buffer_type = MYSQL_TYPE_TINY; dp[1].buffer = &depId; dp[1].is_unsigned = 1;
 					if(mysql_stmt_bind_param(stmt, dp) == 0){
 						mysql_stmt_execute(stmt);
 					}
@@ -1472,18 +1498,25 @@ public:
 				memset(ires, 0, sizeof(ires));
 				unsigned long blobLen = 0;
 				ires[0].buffer_type = MYSQL_TYPE_BLOB;
+				ires[0].buffer = nullptr;
+				ires[0].buffer_length = 0;
 				ires[0].length = &blobLen;
 				mysql_stmt_bind_result(stmt, ires);
 
-				if(mysql_stmt_fetch(stmt) == 0 || mysql_stmt_fetch(stmt) == MYSQL_DATA_TRUNCATED){
+				int fetchRet = mysql_stmt_fetch(stmt);
+				if(fetchRet == 0 || fetchRet == MYSQL_DATA_TRUNCATED){
 					if(blobLen > 0){
 						delete[] Slot->Inventory;
 						Slot->Inventory = new uint8[blobLen];
 						Slot->InventorySize = (int)blobLen;
 
-						ires[0].buffer = Slot->Inventory;
-						ires[0].buffer_length = blobLen;
-						mysql_stmt_fetch_column(stmt, ires, 0, 0);
+						MYSQL_BIND colBind;
+						memset(&colBind, 0, sizeof(colBind));
+						colBind.buffer_type = MYSQL_TYPE_BLOB;
+						colBind.buffer = Slot->Inventory;
+						colBind.buffer_length = blobLen;
+						colBind.length = &blobLen;
+						mysql_stmt_fetch_column(stmt, &colBind, 0, 0);
 					}
 				}
 			}
@@ -1503,19 +1536,31 @@ public:
 				MYSQL_BIND dres[2];
 				memset(dres, 0, sizeof(dres));
 				dres[0].buffer_type = MYSQL_TYPE_TINY; dres[0].buffer = &did; dres[0].is_unsigned = 1;
-				dres[1].buffer_type = MYSQL_TYPE_BLOB; dres[1].length = &blobLen;
+				dres[1].buffer_type = MYSQL_TYPE_BLOB;
+				dres[1].buffer = nullptr;
+				dres[1].buffer_length = 0;
+				dres[1].length = &blobLen;
 				mysql_stmt_bind_result(stmt, dres);
 
-				while(mysql_stmt_fetch(stmt) == 0 || mysql_stmt_fetch(stmt) == MYSQL_DATA_TRUNCATED){
+				int fetchRet;
+				while((fetchRet = mysql_stmt_fetch(stmt)) == 0 || fetchRet == MYSQL_DATA_TRUNCATED){
 					if(did < MAX_DEPOTS && blobLen > 0){
 						delete[] Slot->Depot[did];
 						Slot->Depot[did] = new uint8[blobLen];
 						Slot->DepotSize[did] = (int)blobLen;
 
-						dres[1].buffer = Slot->Depot[did];
-						dres[1].buffer_length = blobLen;
-						mysql_stmt_fetch_column(stmt, &dres[1], 1, 0);
+						MYSQL_BIND colBind;
+						memset(&colBind, 0, sizeof(colBind));
+						colBind.buffer_type = MYSQL_TYPE_BLOB;
+						colBind.buffer = Slot->Depot[did];
+						colBind.buffer_length = blobLen;
+						colBind.length = &blobLen;
+						mysql_stmt_fetch_column(stmt, &colBind, 1, 0);
 					}
+					// Reset dres[1] for next row fetch
+					blobLen = 0;
+					dres[1].buffer = nullptr;
+					dres[1].buffer_length = 0;
 				}
 			}
 			mysql_stmt_close(stmt);

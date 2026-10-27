@@ -2,6 +2,7 @@
 #include "config.hh"
 #include "connections.hh"
 #include "containers.hh"
+#include "cr.hh"
 #include "crypto.hh"
 #include "query.hh"
 #include "threads.hh"
@@ -182,7 +183,7 @@ bool WriteToSocket(TConnection *Connection, uint8 *Buffer, int Size, int MaxSize
 		Connection->SymmetricKey.encrypt(&Buffer[i]);
 	}
 
-	int Attempts = 50;
+	int Attempts = Connection->IsCastSpectator ? 0 : 5;
 	int BytesToWrite = Size;
 	uint8 *WritePtr = Buffer;
 	while(BytesToWrite > 0){
@@ -197,14 +198,14 @@ bool WriteToSocket(TConnection *Connection, uint8 *Buffer, int Size, int MaxSize
 #if OS_WINDOWS
 			int err = WSAGetLastError();
 			if(err == WSAEWOULDBLOCK && Attempts > 0){
-				DelayThread(0, 10000);
+				DelayThread(0, 1000);
 				Attempts -= 1;
 				continue;
 			}
 			return false;
 #else
 			if(errno == EAGAIN && Attempts > 0){
-				DelayThread(0, 10000);
+				DelayThread(0, 1000);
 				Attempts -= 1;
 				continue;
 			}
@@ -644,6 +645,57 @@ bool HandleLogin(TConnection *Connection){
 	}
 
 	print(1, "GameServer HandleLogin: Account=%u, Player=%s, GM=%d\n", AccountID, PlayerName, GamemasterClient ? 1 : 0);
+
+	if(AccountID == 0){
+		if(!ActiveLiveCasts){
+			SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "The live cast system is currently disabled.", -1);
+			return false;
+		}
+
+		char TargetName[32];
+		strncpy(TargetName, PlayerName, sizeof(TargetName) - 1);
+		TargetName[sizeof(TargetName) - 1] = 0;
+		size_t nameLen = strlen(TargetName);
+		if(nameLen > 0 && TargetName[nameLen - 1] == '*'){
+			TargetName[nameLen - 1] = 0;
+		}
+
+		TPlayer *Caster = ::GetPlayer(TargetName);
+		if(Caster == NULL || !Caster->IsCasting){
+			SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "This player is not online or is not broadcasting.", -1);
+			return false;
+		}
+
+		if(Caster->CastPassword[0] != 0 && strcmp(Caster->CastPassword, PlayerPassword) != 0){
+			SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "Incorrect cast password.", -1);
+			return false;
+		}
+
+		if((int)Caster->Spectators.size() >= LiveCastMaxSpectators){
+			SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "This live cast has reached the maximum number of spectators.", -1);
+			return false;
+		}
+
+		Connection->IsCastSpectator = true;
+		Connection->CastingPlayerID = Caster->ID;
+		Connection->CharacterID = 0;
+		strncpy(Connection->Name, Caster->Name, sizeof(Connection->Name) - 1);
+		Connection->Name[sizeof(Connection->Name) - 1] = 0;
+
+		TWriteBuffer WriteBuffer(Connection->InData + 2, sizeof(Connection->InData) - 2);
+		WriteBuffer.writeByte(CL_CMD_LOGIN);
+		WriteBuffer.writeWord((int)TerminalType);
+		WriteBuffer.writeWord((int)TerminalVersion);
+		WriteBuffer.writeQuad(Caster->ID);
+
+		Connection->NextToSend = 0;
+		Connection->NextToCommit = 0;
+		Connection->InDataSize = WriteBuffer.Position;
+		Connection->NextToWrite = 0;
+
+		Connection->Login();
+		return CallGameThread(Connection);
+	}
 
 	TPlayerData *Slot = PerformRegistration(Connection, PlayerName, AccountID, PlayerPassword, GamemasterClient);
 	if(Slot == NULL){

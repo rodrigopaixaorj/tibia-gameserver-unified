@@ -9,6 +9,8 @@
 #include "threads.hh"
 #include "writer.hh"
 
+#include <vector>
+
 static Semaphore PlayerMutex(1);
 static vector<TPlayer*> PlayerList(0, 100, 10, NULL);
 static int FirstFreePlayer;
@@ -59,6 +61,9 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->MutingEndRound = 0;
 	this->NumberOfMutings = 0;
 	this->GhostMode = false;
+	this->IsCasting = false;
+	this->CastPassword[0] = 0;
+	this->CastDescription[0] = 0;
 
 	memset(this->Rights, 0, sizeof(this->Rights));
 
@@ -228,6 +233,9 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 
 TPlayer::~TPlayer(void){
 	LogoutOrder(this);
+	if(this->IsCasting){
+		this->StopCast();
+	}
 	if(this->ConstructError != NOERROR){
 		this->DelInList();
 		return;
@@ -318,6 +326,7 @@ TPlayer::~TPlayer(void){
 	this->DelInList();
 
 	PlayerData->Dirty = true;
+	SavePlayerPoolSlot(PlayerData);
 	// TODO(fusion): Something is telling me that `PlayerData->Sticky` is also poorly managed.
 	DecreasePlayerPoolSlotSticky(PlayerData);
 	ReleasePlayerPoolSlot(PlayerData);
@@ -3211,3 +3220,57 @@ void ExitPlayer(void){
 	CreatePlayerList(false);
 	ExitPlayerIndex();
 }
+
+// Live Cast System implementation
+void TPlayer::BroadcastToSpectators(const uint8 *Data, int Size){
+	for(size_t i = 0; i < this->Spectators.size(); ){
+		TConnection *SpecConn = this->Spectators[i];
+		if(SpecConn == NULL || !SpecConn->Live() || SpecConn->Overflow){
+			if(SpecConn != NULL && SpecConn->Overflow){
+				SpecConn->Disconnect();
+			}
+			this->Spectators.erase(this->Spectators.begin() + i);
+			continue;
+		}
+		BroadcastChunkToSpectator(SpecConn, Data, Size);
+		++i;
+	}
+}
+
+bool TPlayer::AddSpectator(TConnection *Connection){
+	if(Connection == NULL) return false;
+	for(TConnection *Conn : this->Spectators){
+		if(Conn == Connection) return true;
+	}
+	this->Spectators.push_back(Connection);
+	return true;
+}
+
+void TPlayer::RemoveSpectator(TConnection *Connection){
+	for(auto it = this->Spectators.begin(); it != this->Spectators.end(); ++it){
+		if(*it == Connection){
+			this->Spectators.erase(it);
+			break;
+		}
+	}
+}
+
+void TPlayer::StopCast(void){
+	this->IsCasting = false;
+	this->CastPassword[0] = 0;
+	this->CastDescription[0] = 0;
+
+	std::vector<TConnection*> CurrentSpectators = this->Spectators;
+	this->Spectators.clear();
+
+	for(TConnection *SpecConn : CurrentSpectators){
+		if(SpecConn != NULL && SpecConn->Live()){
+			SpecConn->SwitchCast(102); // Tenta zapping para outro cast
+			if(SpecConn->CastingPlayerID == this->ID || SpecConn->CastingPlayerID == 0){
+				SendMessage(SpecConn, TALK_FAILURE_MESSAGE, "The live cast broadcast has ended.");
+				SpecConn->Disconnect();
+			}
+		}
+	}
+}
+

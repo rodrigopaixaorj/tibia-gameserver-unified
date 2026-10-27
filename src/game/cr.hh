@@ -7,6 +7,8 @@
 #include "enums.hh"
 #include "map.hh"
 
+#include <vector>
+
 struct TCreature;
 struct TMonster;
 struct TNPC;
@@ -930,6 +932,16 @@ struct TPlayer: TCreature {
 	uint32 Addressees[20];
 	uint32 AddresseesTimes[20];
 	bool GhostMode;
+
+	// Live Cast System
+	bool IsCasting;
+	char CastPassword[32];
+	char CastDescription[128];
+	std::vector<TConnection*> Spectators;
+	void BroadcastToSpectators(const uint8 *Data, int Size);
+	bool AddSpectator(TConnection *Connection);
+	void RemoveSpectator(TConnection *Connection);
+	void StopCast(void);
 };
 
 // crmain.cc

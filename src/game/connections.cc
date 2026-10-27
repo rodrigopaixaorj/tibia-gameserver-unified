@@ -3,6 +3,12 @@
 #include "info.hh"
 #include "threads.hh"
 #include "writer.hh"
+#include "../database/db.hh"
+#include "../database/db_common.hh"
+#include "config.hh"
+
+#include <vector>
+#include <algorithm>
 
 #if !OS_WINDOWS
 #include <arpa/inet.h>
@@ -18,6 +24,8 @@ static TConnection Connections[MAX_CONNECTIONS];
 // =============================================================================
 TConnection::TConnection(void){
 	this->State = CONNECTION_FREE;
+	this->IsCastSpectator = false;
+	this->CastingPlayerID = 0;
 }
 
 void TConnection::Process(void){
@@ -166,6 +174,14 @@ const char *TConnection::GetIPAddress(void){
 }
 
 void TConnection::Free(void){
+	if(this->IsCastSpectator && this->CastingPlayerID != 0){
+		TPlayer *Caster = ::GetPlayer(this->CastingPlayerID);
+		if(Caster != NULL){
+			Caster->RemoveSpectator(this);
+		}
+	}
+	this->IsCastSpectator = false;
+	this->CastingPlayerID = 0;
 	this->State = CONNECTION_FREE;
 }
 
@@ -177,6 +193,8 @@ void TConnection::Assign(void){
 	this->State = CONNECTION_ASSIGNED;
 	this->ThreadID = gettid();
 	this->LoginTimer = 0;
+	this->IsCastSpectator = false;
+	this->CastingPlayerID = 0;
 }
 
 void TConnection::Connect(int Socket){
@@ -241,6 +259,31 @@ bool TConnection::JoinGame(TReadBuffer *Buffer){
 	this->TerminalWidth = 18;
 	this->TerminalHeight = 14;
 
+	if(this->IsCastSpectator){
+		TPlayer *Caster = ::GetPlayer(this->CastingPlayerID);
+		if(Caster == NULL || !Caster->IsCasting){
+			return false;
+		}
+
+		this->CharacterID = 0;
+		strncpy(this->Name, Caster->Name, sizeof(this->Name) - 1);
+		this->Name[sizeof(this->Name) - 1] = 0;
+		Caster->AddSpectator(this);
+
+		this->EnterGame();
+		SendInitGame(this, Caster->ID);
+		SendRights(this);
+		SendFullScreen(this);
+		SendAmbiente(this);
+		SendPlayerData(this);
+		SendPlayerSkills(this);
+		SendMessage(this, TALK_LOGIN_MESSAGE, "Welcome to Live Cast! You are currently watching %s.", Caster->Name);
+		SendMessage(this, TALK_LOGIN_MESSAGE, "Use Ctrl + Arrow Keys to browse active broadcasts.");
+		this->TimeStamp = RoundNr;
+		this->TimeStampAction = RoundNr;
+		return true;
+	}
+
 	LOG("JoinGame: Initializing CharacterID=%u for Socket=%d", this->CharacterID, this->GetSocket());
 
 	TPlayer *Player = ::GetPlayer(this->CharacterID);
@@ -300,6 +343,19 @@ void TConnection::Logout(int Delay, bool StopFight){
 		error("TConnection::Logout: Ungültiger Verbindungszustand %d.\n", this->State);
 	}
 
+	if(this->IsCastSpectator){
+		if(this->CastingPlayerID != 0){
+			TPlayer *Caster = ::GetPlayer(this->CastingPlayerID);
+			if(Caster != NULL){
+				Caster->RemoveSpectator(this);
+			}
+		}
+		this->IsCastSpectator = false;
+		this->CastingPlayerID = 0;
+		this->Disconnect();
+		return;
+	}
+
 	this->State = CONNECTION_LOGOUT;
 	if(this->CharacterID != 0){
 		TPlayer *Player = ::GetPlayer(this->CharacterID);
@@ -353,6 +409,8 @@ TPlayer *TConnection::GetPlayer(void){
 	TPlayer *Player = NULL;
 	if(this->CharacterID != 0){
 		Player = ::GetPlayer(this->CharacterID);
+	}else if(this->IsCastSpectator && this->CastingPlayerID != 0){
+		Player = ::GetPlayer(this->CastingPlayerID);
 	}
 	return Player;
 }
@@ -368,6 +426,9 @@ const char *TConnection::GetName(void){
 
 void TConnection::GetPosition(int *x, int *y, int *z){
 	TPlayer *Player = this->GetPlayer();
+	if(Player == NULL && this->IsCastSpectator && this->CastingPlayerID != 0){
+		Player = ::GetPlayer(this->CastingPlayerID);
+	}
 	if(Player != NULL){
 		*x = Player->posx;
 		*y = Player->posy;
@@ -587,3 +648,139 @@ void ExitConnections(void){
 	ExitSending();
 	ExitReceiving();
 }
+
+// Live Cast System implementation
+static std::vector<TPlayer*> GetActiveCasters(void){
+	std::vector<TPlayer*> casters;
+	for(int i = 0; i < MAX_CONNECTIONS; ++i){
+		TConnection *Conn = &Connections[i];
+		if(Conn->InGame() && !Conn->IsCastSpectator && Conn->CharacterID != 0){
+			TPlayer *Player = Conn->GetPlayer();
+			if(Player != NULL && Player->IsCasting){
+				casters.push_back(Player);
+			}
+		}
+	}
+	return casters;
+}
+
+int GetActiveCastCount(void){
+	int count = 0;
+	for(int i = 0; i < MAX_CONNECTIONS; ++i){
+		TConnection *Conn = &Connections[i];
+		if(Conn->InGame() && !Conn->IsCastSpectator && Conn->CharacterID != 0){
+			TPlayer *Player = Conn->GetPlayer();
+			if(Player != NULL && Player->IsCasting){
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
+int GetActiveCastList(struct TCharacterLoginData *OutData, int MaxCount, const char *PasswordFilter){
+	if(OutData == NULL || MaxCount <= 0){
+		return 0;
+	}
+
+	int count = 0;
+	for(int i = 0; i < MAX_CONNECTIONS && count < MaxCount; ++i){
+		TConnection *Conn = &Connections[i];
+		if(Conn->InGame() && !Conn->IsCastSpectator && Conn->CharacterID != 0){
+			TPlayer *Player = Conn->GetPlayer();
+			if(Player != NULL && Player->IsCasting){
+				bool hasPassword = (Player->CastPassword[0] != 0);
+				if(hasPassword && PasswordFilter != NULL && PasswordFilter[0] != 0){
+					if(strcmp(Player->CastPassword, PasswordFilter) != 0){
+						continue;
+					}
+				}
+
+				TCharacterLoginData &charData = OutData[count];
+				memset(&charData, 0, sizeof(charData));
+				if(hasPassword && (PasswordFilter == NULL || PasswordFilter[0] == 0)){
+					snprintf(charData.Name, sizeof(charData.Name), "%s*", Player->Name);
+				}else{
+					strncpy(charData.Name, Player->Name, sizeof(charData.Name) - 1);
+				}
+
+				snprintf(charData.WorldName, sizeof(charData.WorldName), "Cast [%d/%d]",
+					(int)Player->Spectators.size(), LiveCastMaxSpectators);
+
+				if(WorldAddress[0] != 0 && strcmp(WorldAddress, "0.0.0.0") != 0){
+					charData.WorldAddress = DB_ParseIPv4(WorldAddress);
+				}else{
+					charData.WorldAddress = DB_ParseIPv4("127.0.0.1");
+				}
+				charData.WorldPort = GamePort > 0 ? GamePort : 7172;
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
+void TConnection::SwitchCast(int Direction){
+	if(!this->IsCastSpectator){
+		return;
+	}
+
+	std::vector<TPlayer*> casters = GetActiveCasters();
+	if(casters.size() <= 1 && this->CastingPlayerID != 0){
+		SendSnapback(this);
+		SendMessage(this, TALK_LOGIN_MESSAGE, "There are no other active broadcasts to switch to.");
+		return;
+	}
+
+	std::sort(casters.begin(), casters.end(), [](TPlayer *a, TPlayer *b){
+		return strcmp(a->Name, b->Name) < 0;
+	});
+
+	int currentIndex = -1;
+	for(size_t i = 0; i < casters.size(); ++i){
+		if(casters[i]->ID == this->CastingPlayerID){
+			currentIndex = (int)i;
+			break;
+		}
+	}
+
+	int newIndex = currentIndex;
+	if(currentIndex == -1){
+		newIndex = 0;
+	}else{
+		if(Direction == CL_CMD_ROTATE_NORTH || Direction == CL_CMD_ROTATE_EAST){
+			newIndex = (currentIndex + 1) % (int)casters.size();
+		}else{
+			newIndex = (currentIndex - 1 + (int)casters.size()) % (int)casters.size();
+		}
+	}
+
+	if(newIndex >= 0 && newIndex < (int)casters.size()){
+		TPlayer *NewCaster = casters[newIndex];
+		if(NewCaster->ID == this->CastingPlayerID && casters.size() > 1){
+			return;
+		}
+
+		if(this->CastingPlayerID != 0){
+			TPlayer *OldCaster = ::GetPlayer(this->CastingPlayerID);
+			if(OldCaster != NULL){
+				OldCaster->RemoveSpectator(this);
+			}
+		}
+
+		this->CastingPlayerID = NewCaster->ID;
+		strncpy(this->Name, NewCaster->Name, sizeof(this->Name) - 1);
+		this->Name[sizeof(this->Name) - 1] = 0;
+		NewCaster->AddSpectator(this);
+
+		this->ClearKnownCreatureTable(false);
+		SendInitGame(this, NewCaster->ID);
+		SendRights(this);
+		SendFullScreen(this);
+		SendAmbiente(this);
+		SendPlayerData(this);
+		SendPlayerSkills(this);
+		SendMessage(this, TALK_LOGIN_MESSAGE, "You are now watching: %s.", NewCaster->Name);
+	}
+}
+

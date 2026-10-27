@@ -169,6 +169,7 @@ struct TConnection {
 	void Logout(int Delay, bool StopFight);
 	void Close(bool Delay);
 	void Disconnect(void);
+	void SwitchCast(int Direction);
 	TPlayer *GetPlayer(void);
 	const char *GetName(void);
 	void GetPosition(int *x, int *y, int *z);
@@ -222,8 +223,16 @@ struct TConnection {
 	int TerminalHeight;
 	uint32 CharacterID;
 	char Name[31];
+	bool IsCastSpectator;
+	uint32 CastingPlayerID;
 	TKnownCreature KnownCreatureTable[150];
 };
+
+struct TCharacterLoginData;
+
+// Live Cast System helpers
+int GetActiveCastCount(void);
+int GetActiveCastList(struct TCharacterLoginData *OutData, int MaxCount, const char *PasswordFilter);
 
 // connections.cc
 TConnection *AssignFreeConnection(void);
@@ -238,6 +247,7 @@ void ExitConnections(void);
 void SendAll(void);
 bool BeginSendData(TConnection *Connection);
 void FinishSendData(TConnection *Connection);
+void BroadcastChunkToSpectator(TConnection *SpecConn, const uint8 *ChunkData, int ChunkSize);
 void SkipFlush(TConnection *Connection);
 void SendMapObject(TConnection *Connection, Object Obj);
 void SendMapPoint(TConnection *Connection, int x, int y, int z);
