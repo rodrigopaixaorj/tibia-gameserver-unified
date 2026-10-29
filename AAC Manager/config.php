@@ -372,7 +372,7 @@
 		7 => array('x' => 32595, 'y' => 32744, 'z' => 7),  // Port Hope
 		8 => array('x' => 33194, 'y' => 32853, 'z' => 8),  // Ankrahmun
 		9 => array('x' => 33213, 'y' => 32454, 'z' => 1),  // Darashia
-		10 => array('x' => 32097, 'y' => 32205, 'z' => 7)  // Rookgaard
+		10 => array('x' => 32097, 'y' => 32219, 'z' => 7)  // Rookgaard
 	);
 
 	$config['houseConfig'] = array(
