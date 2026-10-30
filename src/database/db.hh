@@ -62,4 +62,16 @@ struct TPlayerData;
 bool DB_SaveCharacterState(const struct TPlayerData *Slot);
 bool DB_LoadCharacterState(struct TPlayerData *Slot);
 
+// Account Manager Queries
+bool DB_AccountExists(uint32 AccountID);
+bool DB_CreateAccount(uint32 AccountID, const char *Password);
+bool DB_AuthenticateAccount(uint32 AccountID, const char *Password);
+bool DB_ChangeAccountPassword(uint32 AccountID, const char *NewPassword);
+int  DB_GetAccountCharacterCount(uint32 AccountID);
+bool DB_CharacterNameExists(const char *Name);
+bool DB_CreateCharacter(uint32 AccountID, const char *Name, int Sex, int Level,
+		const char *Profession, const char *Residence, uint32 *OutCharacterID);
+bool DB_GetCharacterInitInfo(uint32 CharacterID, char *OutProfession, int ProfSize,
+		char *OutResidence, int ResSize);
+
 #endif // TIBIA_DB_HH_

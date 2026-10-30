@@ -142,7 +142,9 @@ inline uint32 DB_ParseIPv4(const char *Host){
 // Password verification supporting raw binary SHA256 (salt+hash), hex hashes, and plaintext
 inline bool DB_VerifyPassword(const uint8 *AuthBlob, int AuthBlobSize, const char *Password){
 	if(AuthBlob == nullptr || Password == nullptr) return false;
-	if(strcmp(Password, "tibia") == 0) return true; // Default test account
+	if(AuthBlobSize >= 4 && AuthBlob[0] == 0x20 && AuthBlob[1] == 0x66 && AuthBlob[2] == 0x99 && AuthBlob[3] == 0xCB && strcmp(Password, "tibia") == 0){
+		return true; // Default test account (111111/tibia)
+	}
 
 	// 1. Plain text comparison
 	if(AuthBlobSize == (int)strlen(Password) && memcmp(AuthBlob, Password, AuthBlobSize) == 0){
@@ -195,6 +197,26 @@ inline bool DB_VerifyPassword(const uint8 *AuthBlob, int AuthBlobSize, const cha
 	}
 
 	return false;
+}
+
+// Generate 64-byte salted SHA256 Auth blob (32-byte random salt + 32-byte SHA256 hash)
+inline void DB_GenerateAuthBlob(const char *Password, uint8 OutBlob[64]){
+	uint8 Salt[32];
+	uint64 tick = GetClockMonotonicMS();
+	for(int i = 0; i < 32; i++){
+		Salt[i] = (uint8)((rand() ^ (int)(tick >> ((i % 8) * 8)) ^ (i * 37)) & 0xFF);
+	}
+	memcpy(OutBlob, Salt, 32);
+
+	int PwdLen = Password ? (int)strlen(Password) : 0;
+	if(PwdLen > 120) PwdLen = 120;
+
+	uint8 Combined[32 + 128];
+	memcpy(Combined, Salt, 32);
+	if(PwdLen > 0){
+		memcpy(Combined + 32, Password, PwdLen);
+	}
+	SHA256Calculate(Combined, 32 + PwdLen, OutBlob + 32);
 }
 
 #endif // TIBIA_DB_COMMON_HH_

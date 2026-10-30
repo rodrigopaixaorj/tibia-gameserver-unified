@@ -4,7 +4,7 @@
 #include "common.hh"
 #include "enums.hh"
 
-#define MAX_IDENT_LENGTH 30
+#define MAX_IDENT_LENGTH 64
 
 struct TReadScriptFile {
 	TReadScriptFile(void);

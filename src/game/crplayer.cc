@@ -172,6 +172,43 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 		this->Skills[SKILL_LEVEL]->Exp = 100;
 		this->Skills[SKILL_LEVEL]->LastLevel = 100;
 		this->Skills[SKILL_LEVEL]->NextLevel = 200;
+	}else if(PlayerData->LastLoginTime == 0){
+		char InitProf[32] = {};
+		char InitRes[32] = {};
+		if(DB_GetCharacterInitInfo(CharacterID, InitProf, sizeof(InitProf), InitRes, sizeof(InitRes))){
+			uint8 TargetProf = PROFESSION_NONE;
+			if(stricmp(InitProf, "Knight") == 0){
+				TargetProf = PROFESSION_KNIGHT;
+			}else if(stricmp(InitProf, "Paladin") == 0){
+				TargetProf = PROFESSION_PALADIN;
+			}else if(stricmp(InitProf, "Sorcerer") == 0){
+				TargetProf = PROFESSION_SORCERER;
+			}else if(stricmp(InitProf, "Druid") == 0){
+				TargetProf = PROFESSION_DRUID;
+			}
+
+			if(TargetProf != PROFESSION_NONE && this->Profession == PROFESSION_NONE){
+				this->Skills[SKILL_LEVEL]->Act = 8;
+				this->Skills[SKILL_LEVEL]->Exp = 4200;
+				this->Skills[SKILL_LEVEL]->LastLevel = 4200;
+				this->Skills[SKILL_LEVEL]->NextLevel = 6500;
+				this->Skills[SKILL_HITPOINTS]->Advance(7);
+				this->Skills[SKILL_MANA]->Advance(7);
+				this->Skills[SKILL_GO_STRENGTH]->Advance(7);
+				this->Skills[SKILL_CARRY_STRENGTH]->Advance(7);
+				this->Skills[SKILL_HITPOINTS]->SetMax();
+				this->Skills[SKILL_MANA]->SetMax();
+				this->SetProfession(TargetProf);
+
+				if(InitRes[0] == 0 || !GetMarkPosition(InitRes, &this->startx, &this->starty, &this->startz)){
+					GetStartPosition(&this->startx, &this->starty, &this->startz, false);
+				}
+				this->posx = this->startx;
+				this->posy = this->starty;
+				this->posz = this->startz;
+				PlayerData->Dirty = true;
+			}
+		}
 	}
 
 	if(CoordinateFlag(this->posx, this->posy, this->posz, BED)){
@@ -662,7 +699,6 @@ void TPlayer::LoadInventory(bool SetStandardInventory){
 			error("# Fehler: %s\n", str);
 		}
 	}else if(SetStandardInventory
-			&& this->Profession == PROFESSION_NONE
 			&& !CheckRight(this->ID, ZERO_CAPACITY)){
 		try{
 			Create(GetBodyContainer(this->ID, INVENTORY_RIGHTHAND),
@@ -3126,6 +3162,12 @@ TPlayerIndexEntry *SearchPlayerIndex(const char *Name){
 	}
 
 	return NULL;
+}
+
+void RegisterNewPlayerInIndex(const char *Name, uint32 CharacterID){
+	if(Name != NULL && Name[0] != 0 && CharacterID != 0){
+		InsertPlayerIndex(&PlayerIndexHead, 0, Name, CharacterID);
+	}
 }
 
 bool PlayerExists(const char *Name){

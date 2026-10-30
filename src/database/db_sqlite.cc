@@ -790,6 +790,197 @@ public:
 
 		return true;
 	}
+
+	bool AccountExists(uint32 AccountID) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || AccountID == 0) return false;
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "SELECT 1 FROM Accounts WHERE AccountID = ?1 LIMIT 1;";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_int(stmt, 1, (int)AccountID);
+		bool exists = (sqlite3_step(stmt) == SQLITE_ROW);
+		sqlite3_finalize(stmt);
+		return exists;
+	}
+
+	bool CreateAccount(uint32 AccountID, const char *Password) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || AccountID <= 1 || !Password || Password[0] == 0) return false;
+
+		uint8 authBlob[64];
+		DB_GenerateAuthBlob(Password, authBlob);
+
+		char emailBuf[64];
+		snprintf(emailBuf, sizeof(emailBuf), "acc_%u@tibia.local", AccountID);
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "INSERT INTO Accounts (AccountID, Email, Auth, PremiumEnd, PendingPremiumDays, Deleted) "
+						  "VALUES (?1, ?2, ?3, 0, 0, 0);";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_int(stmt, 1, (int)AccountID);
+		sqlite3_bind_text(stmt, 2, emailBuf, -1, SQLITE_TRANSIENT);
+		sqlite3_bind_blob(stmt, 3, authBlob, sizeof(authBlob), SQLITE_TRANSIENT);
+
+		bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
+		sqlite3_finalize(stmt);
+		return ok;
+	}
+
+	bool AuthenticateAccount(uint32 AccountID, const char *Password) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || AccountID == 0 || !Password) return false;
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "SELECT Auth, Deleted FROM Accounts WHERE AccountID = ?1 LIMIT 1;";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_int(stmt, 1, (int)AccountID);
+		if(sqlite3_step(stmt) != SQLITE_ROW){
+			sqlite3_finalize(stmt);
+			return false;
+		}
+
+		const void *authBlob = sqlite3_column_blob(stmt, 0);
+		int authBlobSize = sqlite3_column_bytes(stmt, 0);
+		int deleted = sqlite3_column_int(stmt, 1);
+
+		bool valid = (!deleted && DB_VerifyPassword((const uint8*)authBlob, authBlobSize, Password));
+		sqlite3_finalize(stmt);
+		return valid;
+	}
+
+	bool ChangeAccountPassword(uint32 AccountID, const char *NewPassword) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || AccountID <= 1 || !NewPassword || NewPassword[0] == 0) return false;
+
+		uint8 authBlob[64];
+		DB_GenerateAuthBlob(NewPassword, authBlob);
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "UPDATE Accounts SET Auth = ?1 WHERE AccountID = ?2 AND Deleted = 0;";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_blob(stmt, 1, authBlob, sizeof(authBlob), SQLITE_TRANSIENT);
+		sqlite3_bind_int(stmt, 2, (int)AccountID);
+
+		bool ok = (sqlite3_step(stmt) == SQLITE_DONE && sqlite3_changes(m_DB) > 0);
+		sqlite3_finalize(stmt);
+		return ok;
+	}
+
+	int GetAccountCharacterCount(uint32 AccountID) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || AccountID == 0) return 0;
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "SELECT COUNT(*) FROM Characters WHERE AccountID = ?1 AND Deleted = 0;";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return 0;
+		}
+		sqlite3_bind_int(stmt, 1, (int)AccountID);
+		int count = 0;
+		if(sqlite3_step(stmt) == SQLITE_ROW){
+			count = sqlite3_column_int(stmt, 0);
+		}
+		sqlite3_finalize(stmt);
+		return count;
+	}
+
+	bool CharacterNameExists(const char *Name) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || !Name || Name[0] == 0) return false;
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "SELECT 1 FROM Characters WHERE LOWER(Name) = LOWER(?1) LIMIT 1;";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_text(stmt, 1, Name, -1, SQLITE_STATIC);
+		bool exists = (sqlite3_step(stmt) == SQLITE_ROW);
+		sqlite3_finalize(stmt);
+		return exists;
+	}
+
+	bool CreateCharacter(uint32 AccountID, const char *Name, int Sex, int Level,
+			const char *Profession, const char *Residence, uint32 *OutCharacterID) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || AccountID == 0 || !Name || Name[0] == 0) return false;
+
+		int worldId = 1;
+		sqlite3_stmt *stmt = nullptr;
+		if(sqlite3_prepare_v2(m_DB, "SELECT WorldID FROM Worlds LIMIT 1;", -1, &stmt, nullptr) == SQLITE_OK){
+			if(sqlite3_step(stmt) == SQLITE_ROW){
+				worldId = sqlite3_column_int(stmt, 0);
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		uint32 nextCharId = 1;
+		if(sqlite3_prepare_v2(m_DB, "SELECT COALESCE(MAX(CharacterID), 0) + 1 FROM Characters;", -1, &stmt, nullptr) == SQLITE_OK){
+			if(sqlite3_step(stmt) == SQLITE_ROW){
+				nextCharId = (uint32)sqlite3_column_int(stmt, 0);
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		const char *sql = "INSERT INTO Characters (WorldID, CharacterID, AccountID, Name, Sex, Level, Profession, Residence, LastLoginTime, TutorActivities, IsOnline, Deleted) "
+						  "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0, 0, 0, 0);";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_int(stmt, 1, worldId);
+		sqlite3_bind_int(stmt, 2, (int)nextCharId);
+		sqlite3_bind_int(stmt, 3, (int)AccountID);
+		sqlite3_bind_text(stmt, 4, Name, -1, SQLITE_TRANSIENT);
+		sqlite3_bind_int(stmt, 5, Sex);
+		sqlite3_bind_int(stmt, 6, Level > 0 ? Level : 1);
+		sqlite3_bind_text(stmt, 7, Profession ? Profession : "", -1, SQLITE_TRANSIENT);
+		sqlite3_bind_text(stmt, 8, Residence ? Residence : "Rookgaard", -1, SQLITE_TRANSIENT);
+
+		bool ok = (sqlite3_step(stmt) == SQLITE_DONE);
+		sqlite3_finalize(stmt);
+		if(ok && OutCharacterID){
+			*OutCharacterID = nextCharId;
+		}
+		return ok;
+	}
+
+	bool GetCharacterInitInfo(uint32 CharacterID, char *OutProfession, int ProfSize,
+			char *OutResidence, int ResSize) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_DB || CharacterID == 0) return false;
+
+		if(OutProfession && ProfSize > 0) OutProfession[0] = 0;
+		if(OutResidence && ResSize > 0) OutResidence[0] = 0;
+
+		sqlite3_stmt *stmt = nullptr;
+		const char *sql = "SELECT Profession, Residence FROM Characters WHERE CharacterID = ?1 LIMIT 1;";
+		if(sqlite3_prepare_v2(m_DB, sql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+		sqlite3_bind_int(stmt, 1, (int)CharacterID);
+		bool ok = false;
+		if(sqlite3_step(stmt) == SQLITE_ROW){
+			const char *prof = (const char*)sqlite3_column_text(stmt, 0);
+			const char *res = (const char*)sqlite3_column_text(stmt, 1);
+			if(prof && OutProfession && ProfSize > 0){
+				StringCopy(OutProfession, ProfSize, prof);
+			}
+			if(res && OutResidence && ResSize > 0){
+				StringCopy(OutResidence, ResSize, res);
+			}
+			ok = true;
+		}
+		sqlite3_finalize(stmt);
+		return ok;
+	}
 };
 
 std::unique_ptr<IDatabaseDriver> CreateSQLiteDriver(const char *dbPath){

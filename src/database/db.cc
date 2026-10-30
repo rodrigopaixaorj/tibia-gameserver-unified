@@ -154,3 +154,45 @@ bool DB_LoadCharacterState(struct TPlayerData *Slot){
 	if(!g_DBDriver) return false;
 	return g_DBDriver->LoadCharacterState(Slot);
 }
+
+bool DB_AccountExists(uint32 AccountID){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->AccountExists(AccountID);
+}
+
+bool DB_CreateAccount(uint32 AccountID, const char *Password){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->CreateAccount(AccountID, Password);
+}
+
+bool DB_AuthenticateAccount(uint32 AccountID, const char *Password){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->AuthenticateAccount(AccountID, Password);
+}
+
+bool DB_ChangeAccountPassword(uint32 AccountID, const char *NewPassword){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->ChangeAccountPassword(AccountID, NewPassword);
+}
+
+int DB_GetAccountCharacterCount(uint32 AccountID){
+	if(!g_DBDriver) return 0;
+	return g_DBDriver->GetAccountCharacterCount(AccountID);
+}
+
+bool DB_CharacterNameExists(const char *Name){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->CharacterNameExists(Name);
+}
+
+bool DB_CreateCharacter(uint32 AccountID, const char *Name, int Sex, int Level,
+		const char *Profession, const char *Residence, uint32 *OutCharacterID){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->CreateCharacter(AccountID, Name, Sex, Level, Profession, Residence, OutCharacterID);
+}
+
+bool DB_GetCharacterInitInfo(uint32 CharacterID, char *OutProfession, int ProfSize,
+		char *OutResidence, int ResSize){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->GetCharacterInitInfo(CharacterID, OutProfession, ProfSize, OutResidence, ResSize);
+}

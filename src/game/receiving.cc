@@ -11,7 +11,7 @@ bool CommandAllowed(TConnection *Connection, int Command){
 		return false;
 	}
 
-	if(Connection->IsCastSpectator){
+	if(Connection->IsCastSpectator || Connection->IsAccountManager){
 		return Command == CL_CMD_LOGOUT
 			|| Command == CL_CMD_PING
 			|| (Command >= CL_CMD_GO_PATH && Command <= CL_CMD_ROTATE_WEST)
@@ -1798,6 +1798,40 @@ void ReceiveData(TConnection *Connection){
 							}
 						}
 					}
+				}
+			}catch(...){}
+			return;
+		}
+		return;
+	}
+
+	if(Connection->IsAccountManager){
+		if(Command == CL_CMD_LOGOUT){
+			Connection->Logout(0, true);
+			return;
+		}else if(Command == CL_CMD_PING){
+			SendPing(Connection);
+			return;
+		}else if(Command >= CL_CMD_GO_PATH && Command <= CL_CMD_GO_NORTHWEST){
+			SendSnapback(Connection);
+			return;
+		}else if(Command == CL_CMD_ATTACK || Command == CL_CMD_FOLLOW || Command == CL_CMD_CANCEL){
+			SendClearTarget(Connection);
+			return;
+		}else if(Command == CL_CMD_TALK){
+			try{
+				uint8 Mode = Buffer.readByte();
+				char Addressee[30] = {};
+				if(Mode == TALK_PRIVATE_MESSAGE || Mode == TALK_GAMEMASTER_MESSAGE || Mode == TALK_ANONYMOUS_MESSAGE){
+					Buffer.readString(Addressee, sizeof(Addressee));
+				}
+				if(Mode == TALK_CHANNEL_CALL || Mode == TALK_GAMEMASTER_CHANNELCALL || Mode == TALK_ANONYMOUS_CHANNELCALL){
+					Buffer.readWord();
+				}
+				char Text[256] = {};
+				Buffer.readString(Text, sizeof(Text));
+				if(Text[0] != 0){
+					HandleAccountManagerTalk(Connection, Text);
 				}
 			}catch(...){}
 			return;

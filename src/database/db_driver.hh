@@ -56,6 +56,18 @@ public:
 	// Player Persistence Queries (Modern Database Mode)
 	virtual bool SaveCharacterState(const struct TPlayerData *Slot) = 0;
 	virtual bool LoadCharacterState(struct TPlayerData *Slot) = 0;
+
+	// Account Manager Queries
+	virtual bool AccountExists(uint32 AccountID) = 0;
+	virtual bool CreateAccount(uint32 AccountID, const char *Password) = 0;
+	virtual bool AuthenticateAccount(uint32 AccountID, const char *Password) = 0;
+	virtual bool ChangeAccountPassword(uint32 AccountID, const char *NewPassword) = 0;
+	virtual int  GetAccountCharacterCount(uint32 AccountID) = 0;
+	virtual bool CharacterNameExists(const char *Name) = 0;
+	virtual bool CreateCharacter(uint32 AccountID, const char *Name, int Sex, int Level,
+			const char *Profession, const char *Residence, uint32 *OutCharacterID) = 0;
+	virtual bool GetCharacterInitInfo(uint32 CharacterID, char *OutProfession, int ProfSize,
+			char *OutResidence, int ResSize) = 0;
 };
 
 #endif // TIBIA_DB_DRIVER_HH_

@@ -183,7 +183,7 @@ bool WriteToSocket(TConnection *Connection, uint8 *Buffer, int Size, int MaxSize
 		Connection->SymmetricKey.encrypt(&Buffer[i]);
 	}
 
-	int Attempts = Connection->IsCastSpectator ? 0 : 5;
+	int Attempts = (Connection->IsCastSpectator || Connection->IsAccountManager) ? 0 : 5;
 	int BytesToWrite = Size;
 	uint8 *WritePtr = Buffer;
 	while(BytesToWrite > 0){
@@ -687,6 +687,46 @@ bool HandleLogin(TConnection *Connection){
 		WriteBuffer.writeWord((int)TerminalType);
 		WriteBuffer.writeWord((int)TerminalVersion);
 		WriteBuffer.writeQuad(Caster->ID);
+
+		Connection->NextToSend = 0;
+		Connection->NextToCommit = 0;
+		Connection->InDataSize = WriteBuffer.Position;
+		Connection->NextToWrite = 0;
+
+		Connection->Login();
+		return CallGameThread(Connection);
+	}
+
+	if(strcmp(PlayerName, "Account Manager") == 0){
+		if(!AccountManagerEnabled){
+			SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "The Account Manager is currently disabled.", -1);
+			return false;
+		}
+
+		if(AccountID == 1){
+			if(strcmp(PlayerPassword, "1") != 0){
+				SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "Account number or password is not correct.", -1);
+				return false;
+			}
+			Connection->ManagerAccountID = 0;
+		}else{
+			if(!DB_AuthenticateAccount(AccountID, PlayerPassword)){
+				SendLoginMessage(Connection, LOGIN_MESSAGE_ERROR, "Account number or password is not correct.", -1);
+				return false;
+			}
+			Connection->ManagerAccountID = AccountID;
+		}
+
+		Connection->IsAccountManager = true;
+		Connection->CharacterID = 0;
+		strncpy(Connection->Name, "Account Manager", sizeof(Connection->Name) - 1);
+		Connection->Name[sizeof(Connection->Name) - 1] = 0;
+
+		TWriteBuffer WriteBuffer(Connection->InData + 2, sizeof(Connection->InData) - 2);
+		WriteBuffer.writeByte(CL_CMD_LOGIN);
+		WriteBuffer.writeWord((int)TerminalType);
+		WriteBuffer.writeWord((int)TerminalVersion);
+		WriteBuffer.writeQuad(ACCOUNT_MANAGER_VIRTUAL_ID);
 
 		Connection->NextToSend = 0;
 		Connection->NextToCommit = 0;

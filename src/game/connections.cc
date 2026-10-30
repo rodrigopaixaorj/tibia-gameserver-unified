@@ -9,6 +9,9 @@
 
 #include <vector>
 #include <algorithm>
+#include <unordered_map>
+#include <string>
+#include <cctype>
 
 #if !OS_WINDOWS
 #include <arpa/inet.h>
@@ -29,6 +32,16 @@ TConnection::TConnection(void){
 	this->SuppressCastBroadcast = false;
 	this->LastCastSwitchMs = 0;
 	this->LastCastMessageMs = 0;
+	this->IsAccountManager = false;
+	this->ManagerAccountID = 0;
+	this->ManagerState = AM_STATE_NONE;
+	this->DraftAccountID = 0;
+	this->DraftPassword[0] = 0;
+	this->DraftCharName[0] = 0;
+	this->DraftCharSex = 1;
+	this->DraftCharVocation = PROFESSION_NONE;
+	this->DraftCharTown[0] = 0;
+	this->LastManagerTalkMs = 0;
 }
 
 void TConnection::Process(void){
@@ -188,6 +201,16 @@ void TConnection::Free(void){
 	this->SuppressCastBroadcast = false;
 	this->LastCastSwitchMs = 0;
 	this->LastCastMessageMs = 0;
+	this->IsAccountManager = false;
+	this->ManagerAccountID = 0;
+	this->ManagerState = AM_STATE_NONE;
+	this->DraftAccountID = 0;
+	memset(this->DraftPassword, 0, sizeof(this->DraftPassword));
+	this->DraftCharName[0] = 0;
+	this->DraftCharSex = 1;
+	this->DraftCharVocation = PROFESSION_NONE;
+	this->DraftCharTown[0] = 0;
+	this->LastManagerTalkMs = 0;
 	this->State = CONNECTION_FREE;
 }
 
@@ -204,6 +227,16 @@ void TConnection::Assign(void){
 	this->SuppressCastBroadcast = false;
 	this->LastCastSwitchMs = 0;
 	this->LastCastMessageMs = 0;
+	this->IsAccountManager = false;
+	this->ManagerAccountID = 0;
+	this->ManagerState = AM_STATE_NONE;
+	this->DraftAccountID = 0;
+	this->DraftPassword[0] = 0;
+	this->DraftCharName[0] = 0;
+	this->DraftCharSex = 1;
+	this->DraftCharVocation = PROFESSION_NONE;
+	this->DraftCharTown[0] = 0;
+	this->LastManagerTalkMs = 0;
 }
 
 void TConnection::Connect(int Socket){
@@ -300,6 +333,39 @@ bool TConnection::JoinGame(TReadBuffer *Buffer){
 		return true;
 	}
 
+	if(this->IsAccountManager){
+		this->CharacterID = 0;
+		strncpy(this->Name, "Account Manager", sizeof(this->Name) - 1);
+		this->Name[sizeof(this->Name) - 1] = 0;
+
+		this->EnterGame();
+		SendInitGame(this, ACCOUNT_MANAGER_VIRTUAL_ID);
+		SendRights(this);
+		SendFullScreen(this);
+		SendAmbiente(this);
+		SendPlayerData(this);
+		SendPlayerSkills(this);
+
+		int PosX, PosY, PosZ;
+		this->GetPosition(&PosX, &PosY, &PosZ);
+		if(this->ManagerAccountID == 0){
+			this->ManagerState = AM_STATE_GUEST_MENU;
+			const char *msg = "Hello! Type 'account' to create a new account.";
+			SendTalk(this, 0, "Account Manager", TALK_SAY, PosX, PosY, PosZ, msg);
+			SendMessage(this, TALK_LOGIN_MESSAGE, "Account Manager: %s", msg);
+		}else{
+			this->ManagerState = AM_STATE_ACCOUNT_MENU;
+			char msg[192];
+			snprintf(msg, sizeof(msg), "Welcome to Account %u! Type 'character' to create a new character, or 'password' to change your password.", this->ManagerAccountID);
+			SendTalk(this, 0, "Account Manager", TALK_SAY, PosX, PosY, PosZ, msg);
+			SendMessage(this, TALK_LOGIN_MESSAGE, "Account Manager: %s", msg);
+		}
+
+		this->TimeStamp = RoundNr;
+		this->TimeStampAction = RoundNr;
+		return true;
+	}
+
 	LOG("JoinGame: Initializing CharacterID=%u for Socket=%d", this->CharacterID, this->GetSocket());
 
 	TPlayer *Player = ::GetPlayer(this->CharacterID);
@@ -368,6 +434,15 @@ void TConnection::Logout(int Delay, bool StopFight){
 		}
 		this->IsCastSpectator = false;
 		this->CastingPlayerID = 0;
+		this->Disconnect();
+		return;
+	}
+
+	if(this->IsAccountManager){
+		this->IsAccountManager = false;
+		this->ManagerAccountID = 0;
+		this->ManagerState = AM_STATE_NONE;
+		memset(this->DraftPassword, 0, sizeof(this->DraftPassword));
 		this->Disconnect();
 		return;
 	}
@@ -441,6 +516,15 @@ const char *TConnection::GetName(void){
 }
 
 void TConnection::GetPosition(int *x, int *y, int *z){
+	if(this->IsAccountManager){
+		GetStartPosition(x, y, z, true);
+		if(*x == 0 && *y == 0){
+			*x = 32097;
+			*y = 32219;
+			*z = 7;
+		}
+		return;
+	}
 	TPlayer *Player = this->GetPlayer();
 	if(Player == NULL && this->IsCastSpectator && this->CastingPlayerID != 0){
 		Player = ::GetPlayer(this->CastingPlayerID);
@@ -816,6 +900,463 @@ void TConnection::SwitchCast(int Direction){
 		SendPlayerData(this);
 		SendPlayerSkills(this);
 		SendMessage(this, TALK_LOGIN_MESSAGE, "You are now watching: %s.", NewCaster->Name);
+	}
+}
+
+// Account Manager System Implementation
+// =============================================================================
+static std::unordered_map<std::string, int64> g_AccountCreationIpCooldown;
+
+static void SendManagerReply(TConnection *Connection, const char *Format, ...) ATTR_PRINTF(2, 3);
+static void SendManagerReply(TConnection *Connection, const char *Format, ...){
+	if(Connection == NULL || !Connection->InGame()) return;
+
+	char Buffer[512];
+	va_list args;
+	va_start(args, Format);
+	vsnprintf(Buffer, sizeof(Buffer), Format, args);
+	va_end(args);
+
+	int PosX, PosY, PosZ;
+	Connection->GetPosition(&PosX, &PosY, &PosZ);
+	SendTalk(Connection, 0, "Account Manager", TALK_SAY, PosX, PosY, PosZ, Buffer);
+	SendMessage(Connection, TALK_LOGIN_MESSAGE, "Account Manager: %s", Buffer);
+}
+
+static bool IsValidPasswordString(const char *Pwd){
+	if(Pwd == NULL) return false;
+	size_t len = strlen(Pwd);
+	if(len < 1 || len > 25) return false;
+	if(strcmp(Pwd, "1") == 0) return false;
+
+	for(size_t i = 0; i < len; ++i){
+		unsigned char ch = (unsigned char)Pwd[i];
+		if(ch < 0x21 || ch > 0x7E){
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool IsValidCharacterName(const char *Name, const char **OutErrorReason){
+	if(Name == NULL){
+		*OutErrorReason = "Name cannot be empty.";
+		return false;
+	}
+
+	size_t len = strlen(Name);
+	if(len < 3 || len > 20){
+		*OutErrorReason = "Character name must have between 3 and 20 characters.";
+		return false;
+	}
+
+	if(Name[0] == ' ' || Name[len - 1] == ' '){
+		*OutErrorReason = "Character name cannot start or end with a space.";
+		return false;
+	}
+
+	bool prevSpace = false;
+	for(size_t i = 0; i < len; ++i){
+		char ch = Name[i];
+		if(ch == ' '){
+			if(prevSpace){
+				*OutErrorReason = "Character name cannot contain consecutive spaces.";
+				return false;
+			}
+			prevSpace = true;
+		}else if((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')){
+			prevSpace = false;
+		}else{
+			*OutErrorReason = "Character name may only contain letters (A-Z, a-z) and single spaces.";
+			return false;
+		}
+	}
+
+	if(stricmp(Name, "Account Manager") == 0
+			|| stricmp(Name, "Gamemaster") == 0
+			|| stricmp(Name, "Admin") == 0
+			|| stricmp(Name, "Administrator") == 0
+			|| stricmp(Name, "God") == 0
+			|| stricmp(Name, "Tutor") == 0
+			|| stricmp(Name, "CipSoft") == 0
+			|| stricmp(Name, "Customer Support") == 0
+			|| strnicmp(Name, "GM ", 3) == 0
+			|| strnicmp(Name, "CM ", 3) == 0
+			|| strnicmp(Name, "God ", 4) == 0
+			|| GetRaceByName(Name) != 0){
+		*OutErrorReason = "This name is reserved and cannot be used.";
+		return false;
+	}
+
+	return true;
+}
+
+static uint32 GenerateUniqueAccountID(void){
+	for(int attempt = 0; attempt < 200; ++attempt){
+		uint32 r1 = (uint32)(rand() & 0x7FFF);
+		uint32 r2 = (uint32)(rand() & 0x7FFF);
+		uint32 candidate = 100000U + ((r1 << 15) ^ r2) % 99899999U;
+		if(candidate <= 1 || candidate == 666666U) continue;
+		if(!DB_AccountExists(candidate)){
+			return candidate;
+		}
+	}
+	return 0;
+}
+
+void HandleAccountManagerTalk(TConnection *Connection, const char *RawText){
+	if(Connection == NULL || !Connection->IsAccountManager || RawText == NULL){
+		return;
+	}
+
+	int64 nowMs = GetClockMonotonicMS();
+	if(nowMs - Connection->LastManagerTalkMs < 400){
+		SendMessage(Connection, TALK_FAILURE_MESSAGE, "Please wait a moment before typing again.");
+		return;
+	}
+	Connection->LastManagerTalkMs = nowMs;
+
+	// Trim leading and trailing whitespace
+	char Input[256];
+	StringCopy(Input, sizeof(Input), RawText);
+	char *Text = Input;
+	while(*Text == ' ' || *Text == '\t' || *Text == '\r' || *Text == '\n'){
+		++Text;
+	}
+	size_t len = strlen(Text);
+	while(len > 0 && (Text[len - 1] == ' ' || Text[len - 1] == '\t' || Text[len - 1] == '\r' || Text[len - 1] == '\n')){
+		Text[--len] = 0;
+	}
+	if(len == 0){
+		return;
+	}
+
+	int PosX, PosY, PosZ;
+	Connection->GetPosition(&PosX, &PosY, &PosZ);
+	SendTalk(Connection, 0, "You", TALK_SAY, PosX, PosY, PosZ, Text);
+
+	// Global cancel command
+	if(stricmp(Text, "cancel") == 0 || stricmp(Text, "bye") == 0){
+		if(Connection->ManagerAccountID == 0){
+			Connection->ManagerState = AM_STATE_GUEST_MENU;
+			SendManagerReply(Connection, "Operation cancelled. Type 'account' if you want to create a new account.");
+		}else{
+			Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+			SendManagerReply(Connection, "Operation cancelled. Type 'character' to create a character, or 'password' to change your password.");
+		}
+		return;
+	}
+
+	// -------------------------------------------------------------------------
+	// 1. GUEST MODE (Logged in with 1/1 -> Account Creation)
+	// -------------------------------------------------------------------------
+	if(Connection->ManagerAccountID == 0){
+		switch(Connection->ManagerState){
+			case AM_STATE_GUEST_MENU:
+			default:{
+				if(stricmp(Text, "account") == 0 || stricmp(Text, "acc") == 0 || stricmp(Text, "yes") == 0){
+					Connection->ManagerState = AM_STATE_GUEST_ASK_ACC;
+					SendManagerReply(Connection, "What would you like your account number to be? Enter up to 8 numbers (e.g. 123456), or type 'random' to generate one automatically.");
+				}else{
+					SendManagerReply(Connection, "Hello! Type 'account' to create your account.");
+				}
+				break;
+			}
+
+			case AM_STATE_GUEST_ASK_ACC:{
+				if(stricmp(Text, "random") == 0 || stricmp(Text, "auto") == 0 || stricmp(Text, "generate") == 0){
+					uint32 genAcc = GenerateUniqueAccountID();
+					if(genAcc == 0){
+						SendManagerReply(Connection, "Failed to generate a random account number right now. Please type your desired account number (up to 8 digits).");
+						return;
+					}
+					Connection->DraftAccountID = genAcc;
+					Connection->ManagerState = AM_STATE_GUEST_ASK_PASS;
+					SendManagerReply(Connection, "Your generated account number is '%u' (write it down!). Now, what would you like your password to be? (up to 25 characters)", genAcc);
+					return;
+				}
+
+				if(len < 1 || len > 8){
+					SendManagerReply(Connection, "Invalid length! Account number must have between 1 and 8 digits (only numbers), or type 'random'.");
+					return;
+				}
+
+				for(size_t i = 0; i < len; ++i){
+					if(Text[i] < '0' || Text[i] > '9'){
+						SendManagerReply(Connection, "Account number may only contain numbers (0-9), up to 8 digits! Or type 'random' to generate one.");
+						return;
+					}
+				}
+
+				uint32 accNum = (uint32)strtoul(Text, nullptr, 10);
+				if(accNum <= 1 || accNum == 666666U){
+					SendManagerReply(Connection, "Account number '%u' is reserved. Please choose another number (up to 8 digits).", accNum);
+					return;
+				}
+
+				if(DB_AccountExists(accNum)){
+					SendManagerReply(Connection, "Account number '%u' already exists! Please choose a different account number, or type 'random'.", accNum);
+					return;
+				}
+
+				Connection->DraftAccountID = accNum;
+				Connection->ManagerState = AM_STATE_GUEST_ASK_PASS;
+				SendManagerReply(Connection, "Account number '%u' is available! What would you like your password to be? (1 to 25 characters)", accNum);
+				break;
+			}
+
+			case AM_STATE_GUEST_ASK_PASS:{
+				if(strlen(Text) > 25){
+					SendManagerReply(Connection, "Password is too long! Maximum allowed is 25 characters. Please enter a shorter password:");
+					return;
+				}
+				if(!IsValidPasswordString(Text)){
+					SendManagerReply(Connection, "Invalid password! Use 1 to 25 printable characters (cannot be '1' or contain spaces). Please enter your password:");
+					return;
+				}
+
+				StringCopy(Connection->DraftPassword, sizeof(Connection->DraftPassword), Text);
+				Connection->ManagerState = AM_STATE_GUEST_CONFIRM_ACC;
+				SendManagerReply(Connection, "Do you want to create Account '%u' with Password '%s'? Type 'yes' to confirm or 'no' to cancel.",
+						Connection->DraftAccountID, Connection->DraftPassword);
+				break;
+			}
+
+			case AM_STATE_GUEST_CONFIRM_ACC:{
+				if(stricmp(Text, "yes") == 0){
+					std::string ipKey = Connection->GetIPAddress();
+					auto it = g_AccountCreationIpCooldown.find(ipKey);
+					if(it != g_AccountCreationIpCooldown.end() && (nowMs - it->second) < 15000){
+						int waitSec = (int)((15000 - (nowMs - it->second) + 999) / 1000);
+						SendManagerReply(Connection, "Please wait %d second(s) before creating another account.", waitSec);
+						return;
+					}
+
+					if(DB_AccountExists(Connection->DraftAccountID)){
+						Connection->ManagerState = AM_STATE_GUEST_ASK_ACC;
+						SendManagerReply(Connection, "Sorry, account number '%u' was just taken! Please choose another account number (up to 8 digits).", Connection->DraftAccountID);
+						return;
+					}
+
+					if(DB_CreateAccount(Connection->DraftAccountID, Connection->DraftPassword)){
+						g_AccountCreationIpCooldown[ipKey] = nowMs;
+						uint32 createdAcc = Connection->DraftAccountID;
+						Connection->DraftAccountID = 0;
+						memset(Connection->DraftPassword, 0, sizeof(Connection->DraftPassword));
+						Connection->ManagerState = AM_STATE_GUEST_MENU;
+						SendManagerReply(Connection, "Your account '%u' has been created! Please logout (Ctrl+L) and log in with your new account number and password to create your character.", createdAcc);
+					}else{
+						Connection->ManagerState = AM_STATE_GUEST_MENU;
+						SendManagerReply(Connection, "An error occurred while creating your account. Type 'account' to try again.");
+					}
+				}else if(stricmp(Text, "no") == 0){
+					Connection->DraftAccountID = 0;
+					memset(Connection->DraftPassword, 0, sizeof(Connection->DraftPassword));
+					Connection->ManagerState = AM_STATE_GUEST_MENU;
+					SendManagerReply(Connection, "Account creation cancelled. Type 'account' to start again.");
+				}else{
+					SendManagerReply(Connection, "Please type 'yes' to create Account '%u', or 'no' to cancel.", Connection->DraftAccountID);
+				}
+				break;
+			}
+		}
+		return;
+	}
+
+	// -------------------------------------------------------------------------
+	// 2. AUTHENTICATED ACCOUNT MODE (Logged in with real Account -> Create Char / Password)
+	// -------------------------------------------------------------------------
+	switch(Connection->ManagerState){
+		case AM_STATE_ACCOUNT_MENU:
+		default:{
+			if(stricmp(Text, "character") == 0 || stricmp(Text, "char") == 0){
+				int maxChars = (AccountManagerMaxCharacters > 0 ? AccountManagerMaxCharacters : 15);
+				int curChars = DB_GetAccountCharacterCount(Connection->ManagerAccountID);
+				if(curChars >= maxChars){
+					SendManagerReply(Connection, "Your account already has the maximum number of characters (%d).", maxChars);
+					return;
+				}
+				Connection->ManagerState = AM_STATE_CHAR_ASK_NAME;
+				SendManagerReply(Connection, "What would you like your character's name to be? (3 to 20 letters, exact capitalization will be preserved)");
+			}else if(stricmp(Text, "password") == 0 || stricmp(Text, "pass") == 0){
+				Connection->ManagerState = AM_STATE_ACC_ASK_NEW_PASS;
+				SendManagerReply(Connection, "What would you like your new password to be? (up to 25 characters)");
+			}else{
+				SendManagerReply(Connection, "Type 'character' to create a new character, or 'password' to change your account password.");
+			}
+			break;
+		}
+
+		case AM_STATE_ACC_ASK_NEW_PASS:{
+			if(strlen(Text) > 25){
+				SendManagerReply(Connection, "Password is too long! Maximum allowed is 25 characters. Please enter a shorter password:");
+				return;
+			}
+			if(!IsValidPasswordString(Text)){
+				SendManagerReply(Connection, "Invalid password! Use 1 to 25 printable characters (cannot be '1' or contain spaces). Please enter your new password:");
+				return;
+			}
+
+			StringCopy(Connection->DraftPassword, sizeof(Connection->DraftPassword), Text);
+			Connection->ManagerState = AM_STATE_ACC_CONFIRM_PASS;
+			SendManagerReply(Connection, "Do you want to change your password to '%s'? Type 'yes' to confirm or 'no' to cancel.", Connection->DraftPassword);
+			break;
+		}
+
+		case AM_STATE_ACC_CONFIRM_PASS:{
+			if(stricmp(Text, "yes") == 0){
+				if(DB_ChangeAccountPassword(Connection->ManagerAccountID, Connection->DraftPassword)){
+					memset(Connection->DraftPassword, 0, sizeof(Connection->DraftPassword));
+					Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+					SendManagerReply(Connection, "Your account password has been changed successfully! Type 'character' if you wish to create a character.");
+				}else{
+					Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+					SendManagerReply(Connection, "Failed to change password. Please try again later.");
+				}
+			}else if(stricmp(Text, "no") == 0){
+				memset(Connection->DraftPassword, 0, sizeof(Connection->DraftPassword));
+				Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+				SendManagerReply(Connection, "Password change cancelled. Type 'character' or 'password'.");
+			}else{
+				SendManagerReply(Connection, "Please type 'yes' to confirm changing your password, or 'no' to cancel.");
+			}
+			break;
+		}
+
+		case AM_STATE_CHAR_ASK_NAME:{
+			const char *errReason = nullptr;
+			if(!IsValidCharacterName(Text, &errReason)){
+				SendManagerReply(Connection, "%s Please choose another character name:", errReason);
+				return;
+			}
+
+			if(PlayerExists(Text) || DB_CharacterNameExists(Text)){
+				SendManagerReply(Connection, "A character with the name '%s' already exists! Please choose another name:", Text);
+				return;
+			}
+
+			// Preserve the exact capitalization entered by the player
+			StringCopy(Connection->DraftCharName, sizeof(Connection->DraftCharName), Text);
+			Connection->ManagerState = AM_STATE_CHAR_ASK_SEX;
+			SendManagerReply(Connection, "Character name '%s' is available! Should your character be 'male' or 'female'?", Connection->DraftCharName);
+			break;
+		}
+
+		case AM_STATE_CHAR_ASK_SEX:{
+			if(stricmp(Text, "male") == 0 || stricmp(Text, "m") == 0 || stricmp(Text, "boy") == 0 || stricmp(Text, "masculino") == 0 || stricmp(Text, "homem") == 0){
+				Connection->DraftCharSex = 1;
+			}else if(stricmp(Text, "female") == 0 || stricmp(Text, "f") == 0 || stricmp(Text, "girl") == 0 || stricmp(Text, "feminino") == 0 || stricmp(Text, "mulher") == 0){
+				Connection->DraftCharSex = 2;
+			}else{
+				SendManagerReply(Connection, "Invalid sex! Please type 'male' or 'female'.");
+				return;
+			}
+
+			if(AccountManagerChooseVocation){
+				Connection->ManagerState = AM_STATE_CHAR_ASK_VOCATION;
+				SendManagerReply(Connection, "Which vocation would you like to be: 'sorcerer', 'druid', 'paladin' or 'knight'?");
+			}else{
+				Connection->DraftCharVocation = PROFESSION_NONE;
+				StringCopy(Connection->DraftCharTown, sizeof(Connection->DraftCharTown), "Rookgaard");
+				Connection->ManagerState = AM_STATE_CHAR_CONFIRM;
+				SendManagerReply(Connection, "Do you want to create '%s' (%s, Rookgaard, Level 1)? Type 'yes' to confirm or 'no' to cancel.",
+						Connection->DraftCharName,
+						Connection->DraftCharSex == 1 ? "male" : "female");
+			}
+			break;
+		}
+
+		case AM_STATE_CHAR_ASK_VOCATION:{
+			if(stricmp(Text, "sorcerer") == 0 || stricmp(Text, "sorc") == 0 || stricmp(Text, "ms") == 0){
+				Connection->DraftCharVocation = PROFESSION_SORCERER;
+			}else if(stricmp(Text, "druid") == 0 || stricmp(Text, "ed") == 0){
+				Connection->DraftCharVocation = PROFESSION_DRUID;
+			}else if(stricmp(Text, "paladin") == 0 || stricmp(Text, "pally") == 0 || stricmp(Text, "rp") == 0){
+				Connection->DraftCharVocation = PROFESSION_PALADIN;
+			}else if(stricmp(Text, "knight") == 0 || stricmp(Text, "kina") == 0 || stricmp(Text, "ek") == 0){
+				Connection->DraftCharVocation = PROFESSION_KNIGHT;
+			}else{
+				SendManagerReply(Connection, "Invalid vocation! Please choose 'sorcerer', 'druid', 'paladin' or 'knight'.");
+				return;
+			}
+
+			Connection->ManagerState = AM_STATE_CHAR_ASK_TOWN;
+			SendManagerReply(Connection, "Which town would you like to live in: 'Thais', 'Carlin', 'Venore', 'Ab'Dendriel' or 'Kazordoon'?");
+			break;
+		}
+
+		case AM_STATE_CHAR_ASK_TOWN:{
+			if(stricmp(Text, "thais") == 0){
+				StringCopy(Connection->DraftCharTown, sizeof(Connection->DraftCharTown), "Thais");
+			}else if(stricmp(Text, "carlin") == 0){
+				StringCopy(Connection->DraftCharTown, sizeof(Connection->DraftCharTown), "Carlin");
+			}else if(stricmp(Text, "venore") == 0){
+				StringCopy(Connection->DraftCharTown, sizeof(Connection->DraftCharTown), "Venore");
+			}else if(stricmp(Text, "ab'dendriel") == 0 || stricmp(Text, "abdendriel") == 0 || stricmp(Text, "ab") == 0){
+				StringCopy(Connection->DraftCharTown, sizeof(Connection->DraftCharTown), "Ab'Dendriel");
+			}else if(stricmp(Text, "kazordoon") == 0 || stricmp(Text, "kazz") == 0){
+				StringCopy(Connection->DraftCharTown, sizeof(Connection->DraftCharTown), "Kazordoon");
+			}else{
+				SendManagerReply(Connection, "Invalid town! Please choose 'Thais', 'Carlin', 'Venore', 'Ab'Dendriel' or 'Kazordoon'.");
+				return;
+			}
+
+			const char *vocName = "None";
+			if(Connection->DraftCharVocation == PROFESSION_SORCERER) vocName = "Sorcerer";
+			else if(Connection->DraftCharVocation == PROFESSION_DRUID) vocName = "Druid";
+			else if(Connection->DraftCharVocation == PROFESSION_PALADIN) vocName = "Paladin";
+			else if(Connection->DraftCharVocation == PROFESSION_KNIGHT) vocName = "Knight";
+
+			Connection->ManagerState = AM_STATE_CHAR_CONFIRM;
+			SendManagerReply(Connection, "Do you want to create '%s' (%s, %s, Level 8, citizen of %s)? Type 'yes' to confirm or 'no' to cancel.",
+					Connection->DraftCharName,
+					Connection->DraftCharSex == 1 ? "male" : "female",
+					vocName,
+					Connection->DraftCharTown);
+			break;
+		}
+
+		case AM_STATE_CHAR_CONFIRM:{
+			if(stricmp(Text, "yes") == 0){
+				int maxChars = (AccountManagerMaxCharacters > 0 ? AccountManagerMaxCharacters : 15);
+				if(DB_GetAccountCharacterCount(Connection->ManagerAccountID) >= maxChars){
+					Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+					SendManagerReply(Connection, "Your account has reached the maximum number of characters (%d).", maxChars);
+					return;
+				}
+
+				if(PlayerExists(Connection->DraftCharName) || DB_CharacterNameExists(Connection->DraftCharName)){
+					Connection->ManagerState = AM_STATE_CHAR_ASK_NAME;
+					SendManagerReply(Connection, "Sorry, the character name '%s' was just taken! Please choose another name:", Connection->DraftCharName);
+					return;
+				}
+
+				const char *profStr = "";
+				int startLevel = 1;
+				if(Connection->DraftCharVocation == PROFESSION_SORCERER){ profStr = "Sorcerer"; startLevel = 8; }
+				else if(Connection->DraftCharVocation == PROFESSION_DRUID){ profStr = "Druid"; startLevel = 8; }
+				else if(Connection->DraftCharVocation == PROFESSION_PALADIN){ profStr = "Paladin"; startLevel = 8; }
+				else if(Connection->DraftCharVocation == PROFESSION_KNIGHT){ profStr = "Knight"; startLevel = 8; }
+
+				uint32 newCharID = 0;
+				if(DB_CreateCharacter(Connection->ManagerAccountID, Connection->DraftCharName, Connection->DraftCharSex,
+						startLevel, profStr, Connection->DraftCharTown, &newCharID)){
+					RegisterNewPlayerInIndex(Connection->DraftCharName, newCharID);
+					Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+					SendManagerReply(Connection, "Character '%s' has been created! Please logout (Ctrl+L) and log back into your account to play with '%s', or type 'character' to create another.",
+							Connection->DraftCharName, Connection->DraftCharName);
+				}else{
+					Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+					SendManagerReply(Connection, "An error occurred while creating your character. Type 'character' to try again.");
+				}
+			}else if(stricmp(Text, "no") == 0){
+				Connection->ManagerState = AM_STATE_ACCOUNT_MENU;
+				SendManagerReply(Connection, "Character creation cancelled. Type 'character' to start over, or 'password' to change your password.");
+			}else{
+				SendManagerReply(Connection, "Please type 'yes' to create character '%s', or 'no' to cancel.", Connection->DraftCharName);
+			}
+			break;
+		}
 	}
 }
 

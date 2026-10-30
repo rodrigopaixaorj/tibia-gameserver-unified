@@ -1048,6 +1048,7 @@ void ExitPlayerPool(void);
 int GetPlayerIndexEntryNumber(const char *Name, int Position);
 void InsertPlayerIndex(TPlayerIndexInternalNode *Node,
 		int Position, const char *Name, uint32 CharacterID);
+void RegisterNewPlayerInIndex(const char *Name, uint32 CharacterID);
 TPlayerIndexEntry *SearchPlayerIndex(const char *Name);
 bool PlayerExists(const char *Name);
 uint32 GetCharacterID(const char *Name);

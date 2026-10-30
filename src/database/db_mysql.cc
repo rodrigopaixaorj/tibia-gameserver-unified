@@ -1568,6 +1568,348 @@ public:
 
 		return true;
 	}
+
+	bool AccountExists(uint32 AccountID) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || AccountID == 0) return false;
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "SELECT 1 FROM Accounts WHERE AccountID = ? LIMIT 1";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int accId = AccountID;
+		MYSQL_BIND param[1];
+		memset(param, 0, sizeof(param));
+		param[0].buffer_type = MYSQL_TYPE_LONG;
+		param[0].buffer = &accId;
+		param[0].is_unsigned = 1;
+
+		bool exists = false;
+		if(mysql_stmt_bind_param(stmt, param) == 0 && mysql_stmt_execute(stmt) == 0){
+			mysql_stmt_store_result(stmt);
+			exists = (mysql_stmt_fetch(stmt) == 0);
+		}
+		mysql_stmt_close(stmt);
+		return exists;
+	}
+
+	bool CreateAccount(uint32 AccountID, const char *Password) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || AccountID <= 1 || !Password || Password[0] == 0) return false;
+
+		uint8 authBlob[64];
+		DB_GenerateAuthBlob(Password, authBlob);
+
+		char emailBuf[64];
+		snprintf(emailBuf, sizeof(emailBuf), "acc_%u@tibia.local", AccountID);
+		unsigned long emailLen = (unsigned long)strlen(emailBuf);
+		unsigned long blobLen = sizeof(authBlob);
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "INSERT INTO Accounts (AccountID, Email, Auth, PremiumEnd, PendingPremiumDays, Deleted) "
+						  "VALUES (?, ?, ?, 0, 0, 0)";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int accId = AccountID;
+		MYSQL_BIND params[3];
+		memset(params, 0, sizeof(params));
+		params[0].buffer_type = MYSQL_TYPE_LONG;
+		params[0].buffer = &accId;
+		params[0].is_unsigned = 1;
+
+		params[1].buffer_type = MYSQL_TYPE_STRING;
+		params[1].buffer = emailBuf;
+		params[1].buffer_length = sizeof(emailBuf);
+		params[1].length = &emailLen;
+
+		params[2].buffer_type = MYSQL_TYPE_BLOB;
+		params[2].buffer = authBlob;
+		params[2].buffer_length = sizeof(authBlob);
+		params[2].length = &blobLen;
+
+		bool ok = (mysql_stmt_bind_param(stmt, params) == 0 && mysql_stmt_execute(stmt) == 0);
+		mysql_stmt_close(stmt);
+		return ok;
+	}
+
+	bool AuthenticateAccount(uint32 AccountID, const char *Password) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || AccountID == 0 || !Password) return false;
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "SELECT Auth, Deleted FROM Accounts WHERE AccountID = ? LIMIT 1";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int accId = AccountID;
+		MYSQL_BIND param[1];
+		memset(param, 0, sizeof(param));
+		param[0].buffer_type = MYSQL_TYPE_LONG;
+		param[0].buffer = &accId;
+		param[0].is_unsigned = 1;
+
+		if(mysql_stmt_bind_param(stmt, param) != 0 || mysql_stmt_execute(stmt) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		uint8 authBuf[256];
+		unsigned long authLen = 0;
+		int deleted = 0;
+		MYSQL_BIND res[2];
+		memset(res, 0, sizeof(res));
+		res[0].buffer_type = MYSQL_TYPE_BLOB;
+		res[0].buffer = authBuf;
+		res[0].buffer_length = sizeof(authBuf);
+		res[0].length = &authLen;
+		res[1].buffer_type = MYSQL_TYPE_LONG;
+		res[1].buffer = &deleted;
+
+		bool valid = false;
+		if(mysql_stmt_bind_result(stmt, res) == 0 && mysql_stmt_store_result(stmt) == 0 && mysql_stmt_fetch(stmt) == 0){
+			valid = (deleted == 0 && DB_VerifyPassword(authBuf, (int)authLen, Password));
+		}
+		mysql_stmt_close(stmt);
+		return valid;
+	}
+
+	bool ChangeAccountPassword(uint32 AccountID, const char *NewPassword) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || AccountID <= 1 || !NewPassword || NewPassword[0] == 0) return false;
+
+		uint8 authBlob[64];
+		DB_GenerateAuthBlob(NewPassword, authBlob);
+		unsigned long blobLen = sizeof(authBlob);
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "UPDATE Accounts SET Auth = ? WHERE AccountID = ? AND Deleted = 0";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int accId = AccountID;
+		MYSQL_BIND params[2];
+		memset(params, 0, sizeof(params));
+		params[0].buffer_type = MYSQL_TYPE_BLOB;
+		params[0].buffer = authBlob;
+		params[0].buffer_length = sizeof(authBlob);
+		params[0].length = &blobLen;
+
+		params[1].buffer_type = MYSQL_TYPE_LONG;
+		params[1].buffer = &accId;
+		params[1].is_unsigned = 1;
+
+		bool ok = (mysql_stmt_bind_param(stmt, params) == 0 && mysql_stmt_execute(stmt) == 0);
+		mysql_stmt_close(stmt);
+		return ok;
+	}
+
+	int GetAccountCharacterCount(uint32 AccountID) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || AccountID == 0) return 0;
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return 0;
+
+		const char *sql = "SELECT COUNT(*) FROM Characters WHERE AccountID = ? AND Deleted = 0";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return 0;
+		}
+
+		unsigned int accId = AccountID;
+		MYSQL_BIND param[1];
+		memset(param, 0, sizeof(param));
+		param[0].buffer_type = MYSQL_TYPE_LONG;
+		param[0].buffer = &accId;
+		param[0].is_unsigned = 1;
+
+		int count = 0;
+		if(mysql_stmt_bind_param(stmt, param) == 0 && mysql_stmt_execute(stmt) == 0){
+			MYSQL_BIND res[1];
+			memset(res, 0, sizeof(res));
+			res[0].buffer_type = MYSQL_TYPE_LONG;
+			res[0].buffer = &count;
+			if(mysql_stmt_bind_result(stmt, res) == 0 && mysql_stmt_store_result(stmt) == 0){
+				mysql_stmt_fetch(stmt);
+			}
+		}
+		mysql_stmt_close(stmt);
+		return count;
+	}
+
+	bool CharacterNameExists(const char *Name) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || !Name || Name[0] == 0) return false;
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "SELECT 1 FROM Characters WHERE LOWER(Name) = LOWER(?) LIMIT 1";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned long nameLen = (unsigned long)strlen(Name);
+		MYSQL_BIND param[1];
+		memset(param, 0, sizeof(param));
+		param[0].buffer_type = MYSQL_TYPE_STRING;
+		param[0].buffer = (void*)Name;
+		param[0].buffer_length = nameLen;
+		param[0].length = &nameLen;
+
+		bool exists = false;
+		if(mysql_stmt_bind_param(stmt, param) == 0 && mysql_stmt_execute(stmt) == 0){
+			mysql_stmt_store_result(stmt);
+			exists = (mysql_stmt_fetch(stmt) == 0);
+		}
+		mysql_stmt_close(stmt);
+		return exists;
+	}
+
+	bool CreateCharacter(uint32 AccountID, const char *Name, int Sex, int Level,
+			const char *Profession, const char *Residence, uint32 *OutCharacterID) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || AccountID == 0 || !Name || Name[0] == 0) return false;
+
+		int worldId = 1;
+		if(mysql_query(m_MySQL, "SELECT WorldID FROM Worlds LIMIT 1") == 0){
+			MYSQL_RES *res = mysql_store_result(m_MySQL);
+			if(res){
+				MYSQL_ROW row = mysql_fetch_row(res);
+				if(row && row[0]) worldId = atoi(row[0]);
+				mysql_free_result(res);
+			}
+		}
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "INSERT INTO Characters (WorldID, AccountID, Name, Sex, Level, Profession, Residence, LastLoginTime, TutorActivities, IsOnline, Deleted) "
+						  "VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int accId = AccountID;
+		int sexVal = Sex;
+		int lvlVal = Level > 0 ? Level : 1;
+		const char *profStr = Profession ? Profession : "";
+		const char *resStr = Residence ? Residence : "Rookgaard";
+		unsigned long nameLen = (unsigned long)strlen(Name);
+		unsigned long profLen = (unsigned long)strlen(profStr);
+		unsigned long resLen = (unsigned long)strlen(resStr);
+
+		MYSQL_BIND params[7];
+		memset(params, 0, sizeof(params));
+		params[0].buffer_type = MYSQL_TYPE_LONG;
+		params[0].buffer = &worldId;
+
+		params[1].buffer_type = MYSQL_TYPE_LONG;
+		params[1].buffer = &accId;
+		params[1].is_unsigned = 1;
+
+		params[2].buffer_type = MYSQL_TYPE_STRING;
+		params[2].buffer = (void*)Name;
+		params[2].buffer_length = nameLen;
+		params[2].length = &nameLen;
+
+		params[3].buffer_type = MYSQL_TYPE_LONG;
+		params[3].buffer = &sexVal;
+
+		params[4].buffer_type = MYSQL_TYPE_LONG;
+		params[4].buffer = &lvlVal;
+
+		params[5].buffer_type = MYSQL_TYPE_STRING;
+		params[5].buffer = (void*)profStr;
+		params[5].buffer_length = profLen;
+		params[5].length = &profLen;
+
+		params[6].buffer_type = MYSQL_TYPE_STRING;
+		params[6].buffer = (void*)resStr;
+		params[6].buffer_length = resLen;
+		params[6].length = &resLen;
+
+		bool ok = (mysql_stmt_bind_param(stmt, params) == 0 && mysql_stmt_execute(stmt) == 0);
+		if(ok && OutCharacterID){
+			*OutCharacterID = (uint32)mysql_stmt_insert_id(stmt);
+		}
+		mysql_stmt_close(stmt);
+		return ok;
+	}
+
+	bool GetCharacterInitInfo(uint32 CharacterID, char *OutProfession, int ProfSize,
+			char *OutResidence, int ResSize) override {
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL || CharacterID == 0) return false;
+
+		if(OutProfession && ProfSize > 0) OutProfession[0] = 0;
+		if(OutResidence && ResSize > 0) OutResidence[0] = 0;
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt) return false;
+
+		const char *sql = "SELECT Profession, Residence FROM Characters WHERE CharacterID = ? LIMIT 1";
+		if(mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int cid = CharacterID;
+		MYSQL_BIND param[1];
+		memset(param, 0, sizeof(param));
+		param[0].buffer_type = MYSQL_TYPE_LONG;
+		param[0].buffer = &cid;
+		param[0].is_unsigned = 1;
+
+		bool ok = false;
+		if(mysql_stmt_bind_param(stmt, param) == 0 && mysql_stmt_execute(stmt) == 0){
+			char profBuf[64] = {0};
+			char resBuf[64] = {0};
+			unsigned long profLen = 0, resLen = 0;
+
+			MYSQL_BIND res[2];
+			memset(res, 0, sizeof(res));
+			res[0].buffer_type = MYSQL_TYPE_STRING;
+			res[0].buffer = profBuf;
+			res[0].buffer_length = sizeof(profBuf) - 1;
+			res[0].length = &profLen;
+
+			res[1].buffer_type = MYSQL_TYPE_STRING;
+			res[1].buffer = resBuf;
+			res[1].buffer_length = sizeof(resBuf) - 1;
+			res[1].length = &resLen;
+
+			if(mysql_stmt_bind_result(stmt, res) == 0 && mysql_stmt_store_result(stmt) == 0 && mysql_stmt_fetch(stmt) == 0){
+				profBuf[profLen < sizeof(profBuf) ? profLen : sizeof(profBuf) - 1] = 0;
+				resBuf[resLen < sizeof(resBuf) ? resLen : sizeof(resBuf) - 1] = 0;
+				if(OutProfession && ProfSize > 0) StringCopy(OutProfession, ProfSize, profBuf);
+				if(OutResidence && ResSize > 0) StringCopy(OutResidence, ResSize, resBuf);
+				ok = true;
+			}
+		}
+		mysql_stmt_close(stmt);
+		return ok;
+	}
 };
 
 std::unique_ptr<IDatabaseDriver> CreateMySQLDriver(const char *host, int port, const char *user, const char *pass, const char *db, bool autoReconnect){

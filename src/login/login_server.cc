@@ -151,8 +151,33 @@ static void HandleLoginRequest(socket_t ClientSock, const uint8 *Packet, int Pac
 
 		LoginResult = 0;
 		PremiumDays = 0;
+	} else if(AccountID == 1){
+		if(!AccountManagerEnabled){
+			Writer.Write8(10);
+			Writer.WriteString("The Account Manager is currently disabled.");
+			SendLoginXTEAResponse(ClientSock, XTEAKey, ResponsePayload, Writer.Position);
+			return;
+		}
+		if(strcmp(Password, "1") != 0){
+			LoginResult = 2;
+		} else {
+			LoginResult = 0;
+			PremiumDays = 0;
+			NumCharacters = 1;
+			StringCopy(Characters[0].Name, sizeof(Characters[0].Name), "Account Manager");
+			StringCopy(Characters[0].WorldName, sizeof(Characters[0].WorldName), WorldName[0] ? WorldName : "Zanera");
+			Characters[0].WorldAddress = DB_ParseIPv4(WorldAddress[0] ? WorldAddress : "127.0.0.1");
+			Characters[0].WorldPort = (GamePort > 0 ? GamePort : 7172);
+		}
 	} else {
-		LoginResult = DB_LoginAccount(AccountID, Password, IPString, 128, &NumCharacters, Characters, &PremiumDays);
+		LoginResult = DB_LoginAccount(AccountID, Password, IPString, 127, &NumCharacters, Characters, &PremiumDays);
+		if(LoginResult == 0 && AccountManagerEnabled && NumCharacters < 128){
+			StringCopy(Characters[NumCharacters].Name, sizeof(Characters[NumCharacters].Name), "Account Manager");
+			StringCopy(Characters[NumCharacters].WorldName, sizeof(Characters[NumCharacters].WorldName), WorldName[0] ? WorldName : "Zanera");
+			Characters[NumCharacters].WorldAddress = DB_ParseIPv4(WorldAddress[0] ? WorldAddress : "127.0.0.1");
+			Characters[NumCharacters].WorldPort = (GamePort > 0 ? GamePort : 7172);
+			NumCharacters++;
+		}
 	}
 
 	if(LoginResult == 0){

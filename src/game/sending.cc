@@ -95,7 +95,7 @@ void FinishSendData(TConnection *Connection){
 	}
 
 	int ChunkSize = Connection->NextToWrite - Connection->NextToCommit;
-	if(ChunkSize > 0 && Connection->InGame() && !Connection->IsCastSpectator && !Connection->SuppressCastBroadcast){
+	if(ChunkSize > 0 && Connection->InGame() && !Connection->IsCastSpectator && !Connection->IsAccountManager && !Connection->SuppressCastBroadcast){
 		TPlayer *Player = Connection->GetPlayer();
 		if(Player != NULL && Player->IsCasting && !Player->Spectators.empty()){
 			constexpr int OutDataCap = (int)sizeof(Connection->OutData);
@@ -319,6 +319,57 @@ void SendMapObject(TConnection *Connection, Object Obj){
 }
 
 void SendMapPoint(TConnection *Connection, int x, int y, int z){
+	if(Connection->IsAccountManager){
+		int PlayerX, PlayerY, PlayerZ;
+		Connection->GetPosition(&PlayerX, &PlayerY, &PlayerZ);
+		bool IsCenterTile = (x == PlayerX && y == PlayerY && z == PlayerZ);
+
+		Object Obj = GetFirstObject(x, y, z);
+		bool HasNonCreatureObj = false;
+		Object CheckObj = Obj;
+		while(CheckObj != NONE){
+			if(!CheckObj.getObjectType().isCreatureContainer()){
+				HasNonCreatureObj = true;
+				break;
+			}
+			CheckObj = CheckObj.getNextObject();
+		}
+
+		if(HasNonCreatureObj || IsCenterTile){
+			SkipFlush(Connection);
+			int ObjCount = 0;
+			while(Obj != NONE && ObjCount < MAX_OBJECTS_PER_POINT){
+				if(!Obj.getObjectType().isCreatureContainer()){
+					SendItem(Connection, Obj);
+					ObjCount += 1;
+				}
+				Obj = Obj.getNextObject();
+			}
+			if(IsCenterTile && ObjCount < MAX_OBJECTS_PER_POINT){
+				SendWord(Connection, 97);
+				SendQuad(Connection, 0);
+				SendQuad(Connection, ACCOUNT_MANAGER_VIRTUAL_ID);
+				SendString(Connection, "Account Manager");
+				SendByte(Connection, 100);
+				SendByte(Connection, DIRECTION_SOUTH);
+				TOutfit amOutfit = {};
+				amOutfit.OutfitID = 128;
+				amOutfit.Colors[0] = 78;
+				amOutfit.Colors[1] = 69;
+				amOutfit.Colors[2] = 58;
+				amOutfit.Colors[3] = 76;
+				SendOutfit(Connection, amOutfit);
+				SendByte(Connection, 6);
+				SendByte(Connection, 215);
+				SendWord(Connection, 220);
+				SendByte(Connection, SKULL_NONE);
+				SendByte(Connection, PARTY_SHIELD_NONE);
+			}
+		}
+		Skip += 1;
+		return;
+	}
+
 	Object Obj = GetFirstObject(x, y, z);
 	if(Obj != NONE){
 		SkipFlush(Connection);
@@ -1231,6 +1282,23 @@ void SendPlayerData(TConnection *Connection){
 		return;
 	}
 
+	if(Connection->IsAccountManager){
+		SendByte(Connection, SV_CMD_PLAYER_DATA);
+		SendWord(Connection, 150);
+		SendWord(Connection, 150);
+		SendWord(Connection, 400);
+		SendQuad(Connection, 0);
+		SendWord(Connection, 1);
+		SendByte(Connection, 0);
+		SendWord(Connection, 0);
+		SendWord(Connection, 0);
+		SendByte(Connection, 0);
+		SendByte(Connection, 0);
+		SendByte(Connection, 100);
+		FinishSendData(Connection);
+		return;
+	}
+
 	TPlayer *Player = Connection->GetPlayer();
 	if(Player == NULL){
 		error("SendStatus: Zu dieser Verbindung gehört kein Spieler.\n");
@@ -1304,6 +1372,16 @@ void SendPlayerData(TConnection *Connection){
 
 void SendPlayerSkills(TConnection *Connection){
 	if(!BeginSendData(Connection)){
+		return;
+	}
+
+	if(Connection->IsAccountManager){
+		SendByte(Connection, SV_CMD_PLAYER_SKILLS);
+		for(int i = 0; i < 7; ++i){
+			SendByte(Connection, 10);
+			SendByte(Connection, 0);
+		}
+		FinishSendData(Connection);
 		return;
 	}
 
