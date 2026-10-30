@@ -352,13 +352,11 @@ bool TConnection::JoinGame(TReadBuffer *Buffer){
 			this->ManagerState = AM_STATE_GUEST_MENU;
 			const char *msg = "Hello! Type 'account' to create a new account.";
 			SendTalk(this, 0, "Account Manager", TALK_SAY, PosX, PosY, PosZ, msg);
-			SendMessage(this, TALK_LOGIN_MESSAGE, "Account Manager: %s", msg);
 		}else{
 			this->ManagerState = AM_STATE_ACCOUNT_MENU;
 			char msg[192];
 			snprintf(msg, sizeof(msg), "Welcome to Account %u! Type 'character' to create a new character, or 'password' to change your password.", this->ManagerAccountID);
 			SendTalk(this, 0, "Account Manager", TALK_SAY, PosX, PosY, PosZ, msg);
-			SendMessage(this, TALK_LOGIN_MESSAGE, "Account Manager: %s", msg);
 		}
 
 		this->TimeStamp = RoundNr;
@@ -920,7 +918,6 @@ static void SendManagerReply(TConnection *Connection, const char *Format, ...){
 	int PosX, PosY, PosZ;
 	Connection->GetPosition(&PosX, &PosY, &PosZ);
 	SendTalk(Connection, 0, "Account Manager", TALK_SAY, PosX, PosY, PosZ, Buffer);
-	SendMessage(Connection, TALK_LOGIN_MESSAGE, "Account Manager: %s", Buffer);
 }
 
 static bool IsValidPasswordString(const char *Pwd){

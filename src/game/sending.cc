@@ -361,7 +361,7 @@ void SendMapPoint(TConnection *Connection, int x, int y, int z){
 				SendOutfit(Connection, amOutfit);
 				SendByte(Connection, 6);
 				SendByte(Connection, 215);
-				SendWord(Connection, 220);
+				SendWord(Connection, 0);
 				SendByte(Connection, SKULL_NONE);
 				SendByte(Connection, PARTY_SHIELD_NONE);
 			}
@@ -1797,18 +1797,22 @@ void SendMessage(TConnection *Connection, int Mode, const char *Text, ...){
 }
 
 void SendSnapback(TConnection *Connection){
+	if(Connection == NULL){
+		return;
+	}
+
+	TPlayer *Player = Connection->GetPlayer();
+	if(Player == NULL && !Connection->IsAccountManager && !Connection->IsCastSpectator){
+		return;
+	}
+
 	if(!BeginSendData(Connection)){
 		return;
 	}
 
-	// TODO(fusion): Sometimes we check, sometimes we don't.
-	TPlayer *Player = Connection->GetPlayer();
-	if(Player == NULL){
-		return;
-	}
-
+	uint8 Direction = (Player != NULL) ? (uint8)Player->Direction : (uint8)DIRECTION_SOUTH;
 	SendByte(Connection, SV_CMD_SNAPBACK);
-	SendByte(Connection, (uint8)Player->Direction);
+	SendByte(Connection, Direction);
 	FinishSendData(Connection);
 }
 

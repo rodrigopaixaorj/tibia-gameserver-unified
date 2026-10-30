@@ -1813,6 +1813,9 @@ void ReceiveData(TConnection *Connection){
 			SendPing(Connection);
 			return;
 		}else if(Command >= CL_CMD_GO_PATH && Command <= CL_CMD_GO_NORTHWEST){
+			if(Command != CL_CMD_GO_STOP){
+				SendMessage(Connection, TALK_FAILURE_MESSAGE, "Sorry, not possible.");
+			}
 			SendSnapback(Connection);
 			return;
 		}else if(Command == CL_CMD_ATTACK || Command == CL_CMD_FOLLOW || Command == CL_CMD_CANCEL){
