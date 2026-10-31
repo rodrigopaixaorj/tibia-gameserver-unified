@@ -425,8 +425,7 @@ void TCreature::Move(Object Obj, int DestX, int DestY, int DestZ, uint8 Count){
 	}
 
 	if(Obj == this->CrObject){
-		this->Go(DestX, DestY, DestZ);
-		return;
+		throw NOTMOVABLE;
 	}
 
 	ObjectType ObjType = Obj.getObjectType();
@@ -1095,6 +1094,10 @@ void TCreature::ToDoMove(int ObjX, int ObjY, int ObjZ, ObjectType Type, uint8 RN
 
 	int Delay = 100;
 	if(Obj.getObjectType().isCreatureContainer()){
+		if(Obj.getCreatureID() == this->ID){
+			throw NOTMOVABLE;
+		}
+
 		Object DestBank = GetFirstObject(DestX, DestY, DestZ);
 		if(DestBank == NONE || !DestBank.getObjectType().getFlag(BANK)){
 			throw NOTACCESSIBLE;

@@ -371,6 +371,11 @@ void TCombat::SetAttackDest(uint32 TargetID, bool Follow){
 	}
 
 	if(!Follow){
+		if(Target->Type == PLAYER && (CheckRight(Target->ID, INVULNERABLE) || CheckRight(Target->ID, GAMEMASTER_OUTFIT))){
+			this->StopAttack(0);
+			throw ATTACKNOTALLOWED;
+		}
+
 		if(Master->Type == PLAYER && Target->Type == PLAYER){
 			if(this->SecureMode == SECURE_MODE_ENABLED && WorldType == NORMAL
 					&& !((TPlayer*)Master)->IsAttackJustified(TargetID)){
@@ -574,6 +579,11 @@ void TCombat::Attack(void){
 	if(Distance > 8){
 		this->StopAttack(0);
 		throw TARGETLOST;
+	}
+
+	if(Target->Type == PLAYER && (CheckRight(Target->ID, INVULNERABLE) || CheckRight(Target->ID, GAMEMASTER_OUTFIT))){
+		this->StopAttack(0);
+		throw ATTACKNOTALLOWED;
 	}
 
 	if(Master->Type == PLAYER && Target->Type == PLAYER){

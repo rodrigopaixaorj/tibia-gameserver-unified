@@ -4349,6 +4349,10 @@ void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest){
 	}
 
 	if(Aggressive){
+		if(Target != NULL && Target->Type == PLAYER && (CheckRight(Target->ID, INVULNERABLE) || CheckRight(Target->ID, GAMEMASTER_OUTFIT))){
+			throw ATTACKNOTALLOWED;
+		}
+
 		int DestX, DestY, DestZ;
 		GetObjectCoordinates(Dest, &DestX, &DestY, &DestZ);
 		if(!CheckRight(Actor->ID, ATTACK_EVERYWHERE)

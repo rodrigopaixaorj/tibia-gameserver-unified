@@ -316,7 +316,7 @@ void CheckTopMoveObject(uint32 CreatureID, Object Obj, Object Ignore){
 
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType.isCreatureContainer() && Obj.getCreatureID() == CreatureID){
-		return;
+		throw NOTMOVABLE;
 	}
 
 	Object Best = NONE;
@@ -326,10 +326,9 @@ void CheckTopMoveObject(uint32 CreatureID, Object Obj, Object Ignore){
 		if(Help != Ignore){
 			ObjectType HelpType = Help.getObjectType();
 
-			// NOTE(fusion): We're looking for the top move object. The creature
-			// check here makes sure only the first creature found is kept as the
-			// best candidate, since creatures on a map container are in a sequence.
-			if(Best == NONE || (!HelpType.getFlag(UNMOVE) && (!BestIsCreature || !HelpType.isCreatureContainer()))){
+			// NOTE(fusion): We're looking for the top move object. If a movable creature
+			// was already found, lower priority ground items must not override it.
+			if(Best == NONE || (!HelpType.getFlag(UNMOVE) && !BestIsCreature)){
 				Best = Help;
 				BestIsCreature = HelpType.isCreatureContainer();
 			}
@@ -434,7 +433,11 @@ void CheckMoveObject(uint32 CreatureID, Object Obj, bool Take){
 		throw NOTMOVABLE;
 	}
 
-	if(ObjType.isCreatureContainer() && Obj.getCreatureID() != CreatureID){
+	if(ObjType.isCreatureContainer()){
+		if(Obj.getCreatureID() == CreatureID){
+			throw NOTMOVABLE;
+		}
+
 		TCreature *MovingCreature = GetCreature(Obj);
 		if(MovingCreature == NULL){
 			error("CheckMoveObject: Kreatur existiert nicht.\n");
@@ -541,21 +544,39 @@ void CheckMapDestination(uint32 CreatureID, Object Obj, Object MapCon){
 			throw MOVENOTPOSSIBLE;
 		}
 
-		if(!MovingCreature->MovePossible(DestX, DestY, DestZ, true, OrigZ != DestZ)){
-			if(CreatureID == MovingCreature->ID){
-				throw MOVENOTPOSSIBLE;
-			}else{
+		if(CreatureID != MovingCreature->ID){
+			// Destination must have walkable ground and not be blocked by walls, obstacles, or other creatures
+			if(!CoordinateFlag(DestX, DestY, DestZ, BANK) || CoordinateFlag(DestX, DestY, DestZ, UNPASS)){
 				throw NOROOM;
 			}
-		}
 
-		if(CreatureID != MovingCreature->ID){
+			// Monsters cannot be pushed into protection zones or houses
+			if(MovingCreature->Type == MONSTER && (IsProtectionZone(DestX, DestY, DestZ) || IsHouse(DestX, DestY, DestZ))){
+				throw NOROOM;
+			}
+
+			// Destination must not contain hazard fields (fire, poison, energy)
 			if(CoordinateFlag(DestX, DestY, DestZ, AVOID)){
 				throw NOROOM;
 			}
 
+			// Protection zone boundary: cannot push from inside PZ to outside PZ
 			if(IsProtectionZone(OrigX, OrigY, OrigZ) && !IsProtectionZone(DestX, DestY, DestZ)){
 				throw PROTECTIONZONE;
+			}
+
+			// If moving player, check house invitation
+			if(MovingCreature->Type == PLAYER){
+				uint16 HouseID = GetHouseID(DestX, DestY, DestZ);
+				if(HouseID != 0
+						&& !IsInvited(HouseID, (TPlayer*)MovingCreature, INT_MAX)
+						&& !CheckRight(MovingCreature->ID, ENTER_HOUSES)){
+					throw NOTINVITED;
+				}
+			}
+		}else{
+			if(!MovingCreature->MovePossible(DestX, DestY, DestZ, true, OrigZ != DestZ)){
+				throw MOVENOTPOSSIBLE;
 			}
 		}
 	}
