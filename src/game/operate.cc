@@ -316,7 +316,7 @@ void CheckTopMoveObject(uint32 CreatureID, Object Obj, Object Ignore){
 
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType.isCreatureContainer() && Obj.getCreatureID() == CreatureID){
-		throw NOTMOVABLE;
+		return;
 	}
 
 	Object Best = NONE;
@@ -433,11 +433,7 @@ void CheckMoveObject(uint32 CreatureID, Object Obj, bool Take){
 		throw NOTMOVABLE;
 	}
 
-	if(ObjType.isCreatureContainer()){
-		if(Obj.getCreatureID() == CreatureID){
-			throw NOTMOVABLE;
-		}
-
+	if(ObjType.isCreatureContainer() && Obj.getCreatureID() != CreatureID){
 		TCreature *MovingCreature = GetCreature(Obj);
 		if(MovingCreature == NULL){
 			error("CheckMoveObject: Kreatur existiert nicht.\n");
