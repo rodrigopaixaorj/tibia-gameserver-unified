@@ -621,6 +621,7 @@ struct TCreature: TSkillBase {
 	int Radius;
 	CreatureType Type;
 	bool IsDead;
+	bool CorpseCreated;
 	int LoseInventory;
 	bool LoggingOut;
 	bool LogoutAllowed;

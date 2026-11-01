@@ -2816,6 +2816,33 @@ void EditText(uint32 CreatureID, Object Obj, const char *Text){
 	Change(Obj, EDITOR, AddDynamicString(Creature->Name));
 }
 
+static Object CreateInContainerRecursive(Object Con, ObjectType Type, uint32 Value, int MaxDepth = 8){
+	if(!Con.exists() || MaxDepth <= 0){
+		return NONE;
+	}
+
+	try{
+		return Create(Con, Type, Value);
+	}catch(RESULT r){
+		if(r != CONTAINERFULL){
+			return NONE;
+		}
+	}
+
+	Object Child = GetFirstContainerObject(Con);
+	while(Child != NONE){
+		if(Child.getObjectType().getFlag(CONTAINER)){
+			Object Res = CreateInContainerRecursive(Child, Type, Value, MaxDepth - 1);
+			if(Res != NONE){
+				return Res;
+			}
+		}
+		Child = Child.getNextObject();
+	}
+
+	return NONE;
+}
+
 Object CreateAtCreature(uint32 CreatureID, ObjectType Type, uint32 Value){
 	// TODO(fusion): Bruhh...
 
@@ -2843,8 +2870,8 @@ Object CreateAtCreature(uint32 CreatureID, ObjectType Type, uint32 Value){
 				Object BodyObj = GetBodyObject(CreatureID, Position);
 				if(CheckContainers){
 					if(BodyObj != NONE && BodyObj.getObjectType().getFlag(CONTAINER)){
-						Obj = Create(BodyObj, Type, Value);
-						break;
+						Obj = CreateInContainerRecursive(BodyObj, Type, Value);
+						if(Obj != NONE) break;
 					}
 				}else{
 					if(BodyObj == NONE){
@@ -2867,6 +2894,18 @@ Object CreateAtCreature(uint32 CreatureID, ObjectType Type, uint32 Value){
 		}
 
 		CheckContainers = !CheckContainers;
+	}
+
+	// If equipped body container didn't have room, check player's open containers
+	if(Obj == NONE && Creature->Type == PLAYER){
+		TPlayer *Player = (TPlayer*)Creature;
+		for(int c = 0; c < 16; ++c){
+			Object OpenCon = Player->GetOpenContainer(c);
+			if(OpenCon != NONE){
+				Obj = CreateInContainerRecursive(OpenCon, Type, Value);
+				if(Obj != NONE) break;
+			}
+		}
 	}
 
 	if(Obj == NONE){

@@ -142,6 +142,7 @@ TCreature::TCreature(void) :
 	this->Direction = DIRECTION_SOUTH;
 	this->Radius = INT_MAX;
 	this->IsDead = false;
+	this->CorpseCreated = false;
 	this->LoseInventory = LOSE_INVENTORY_ALL;
 	this->LoggingOut = false;
 	this->LogoutAllowed = false;
@@ -173,7 +174,7 @@ TCreature::TCreature(void) :
 
 TCreature::~TCreature(void){
 	// TODO(fusion): Bruuhh... these exceptions...
-	if(this->IsDead){
+	if(this->IsDead && !this->CorpseCreated){
 		int Race = this->Race;
 		int PoolLiquid = LIQUID_NONE;
 		if(RaceData[Race].Blood == BT_BLOOD){

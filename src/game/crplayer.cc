@@ -290,13 +290,6 @@ TPlayer::~TPlayer(void){
 	}else{
 		Log("game", "Spieler %s ist gestorben.\n", this->Name);
 
-		// NOTE(fusion): This is a disaster. We're deleting inventory data here
-		// so `~TCreature` can handle dropping loot and then re-generate it with
-		// `SaveInventory` if `LoseInventory` is not `LOSE_INVENTORY_ALL`, which
-		// makes sense but is poorly executed.
-		delete[] PlayerData->Inventory;
-		PlayerData->Inventory = NULL;
-
 		bool ResetCharacter = false;
 		if(this->Profession != PROFESSION_NONE && this->Skills[SKILL_LEVEL]->Get() <= 5){
 			Log("game", "Setze Spieler %s komplett zurück wegen Level.\n", this->Name);
@@ -346,6 +339,78 @@ TPlayer::~TPlayer(void){
 		if(CheckRight(this->ID, KEEP_INVENTORY)){
 			this->LoseInventory = LOSE_INVENTORY_NONE;
 		}
+
+		// Create blood pool
+		try{
+			CreatePool(GetMapContainer(this->CrObject),
+					GetSpecialObject(BLOOD_POOL),
+					LIQUID_BLOOD);
+		}catch(...){
+		}
+
+		// Create corpse and drop items
+		try{
+			ObjectType CorpseType = (this->Sex == 1) // MALE ?
+					? RaceData[1].MaleCorpse
+					: RaceData[1].FemaleCorpse;
+			Object Con = GetMapContainer(this->posx, this->posy, this->posz);
+			Object Corpse = Create(Con, CorpseType, 0);
+			this->CorpseCreated = true;
+
+			char Help[128];
+			sprintf(Help, "You recognize %s", this->Name);
+			if(this->Murderer[0] != 0){
+				if(this->Sex == 1){
+					strcat(Help, ". He was killed by ");
+				}else{
+					strcat(Help, ". She was killed by ");
+				}
+				strcat(Help, this->Murderer);
+			}
+			Change(Corpse, TEXTSTRING, AddDynamicString(Help));
+
+			if(this->LoseInventory != LOSE_INVENTORY_NONE){
+				for(int Position = INVENTORY_FIRST;
+						Position <= INVENTORY_LAST;
+						Position += 1){
+					Object Item = GetBodyObject(this->ID, Position);
+					if(Item == NONE){
+						continue;
+					}
+
+					if(this->LoseInventory == LOSE_INVENTORY_ALL
+							|| Item.getObjectType().getFlag(CONTAINER)
+							|| random(0, 9) == 0){
+						try{
+							::Move(0, Item, Corpse, -1, false, NONE);
+						}catch(RESULT r){
+							// If corpse is full (capacity 10), drop to floor tile instead of vanishing
+							try{
+								::Move(0, Item, Con, -1, false, NONE);
+							}catch(...){
+							}
+						}
+					}
+				}
+			}
+		}catch(RESULT r){
+			error("TPlayer::~TPlayer: Kann Leiche/Inventory nicht ablegen (Exc %d, Pos [%d,%d,%d], %s).\n",
+					r, this->posx, this->posy, this->posz, this->Name);
+		}
+
+		// Save remaining (surviving) inventory into PlayerData before saving to database
+		if(this->LoseInventory != LOSE_INVENTORY_ALL){
+			this->SaveInventory();
+		}else{
+			delete[] PlayerData->Inventory;
+			PlayerData->Inventory = NULL;
+			PlayerData->InventorySize = 0;
+		}
+
+		// Set respawn position to temple
+		PlayerData->posx = this->startx;
+		PlayerData->posy = this->starty;
+		PlayerData->posz = this->startz;
 	}
 
 	if(CheckRight(this->ID, READ_GAMEMASTER_CHANNEL)){
